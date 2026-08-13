@@ -1,0 +1,61 @@
+/* ------------------------------------------------------------------
+   Design tokens. Everything downstream is written against these roles,
+   never against raw hex — so re-theming happens in this one file.
+   ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  /* Surfaces & ink ------------------------------------------------ */
+  --plane:            #f4f6fa;
+  --surface-1:        #ffffff;
+  --surface-2:        #f8fafc;
+  --surface-hover:    #f6f8fb;
+  --text-primary:     #0f172a;
+  --text-secondary:   #52596b;
+  --text-muted:       #8a91a3;
+  --border:           #e6e9f0;
+  --border-strong:    #d3d8e3;
+
+  /* Brand --------------------------------------------------------- */
+  --brand:            #2563eb;
+  --brand-strong:     #1d4ed8;
+  --brand-soft:       #eaf1fe;
+  --brand-ink:        #1b4fc4;
+
+  /* Chart roles — validated via dataviz/scripts/validate_palette.js
+     ("#4a3aa7,#0ca30c,#1096a8" passes all-pairs, light, on #ffffff). */
+  --viz-pass:         #0ca30c;   /* status: good      */
+  --viz-fail:         #d03b3b;   /* status: critical  */
+  --viz-warning:      #fab219;   /* status: warning   */
+  --viz-serious:      #ec835a;   /* status: serious   */
+  --viz-evidence:     #4a3aa7;   /* categorical: violet */
+  --viz-risk:         #1096a8;   /* categorical: teal   */
+  --viz-neutral:      #dfe3ea;   /* remainder / "geen" */
+  --viz-gap:          #ffffff;   /* 2px spacer between fills */
+
+  /* Status washes (badges, pills) --------------------------------- */
+  --wash-pass-bg:     #e8f7e8;  --wash-pass-bd:  #b7e5b7;  --wash-pass-fg:  #0a7d0a;
+  --wash-warn-bg:     #fff4e0;  --wash-warn-bd:  #f7d9a1;  --wash-warn-fg:  #a76a06;
+  --wash-fail-bg:     #fdecec;  --wash-fail-bd:  #f4bcbc;  --wash-fail-fg:  #b12f2f;
+  --wash-none-bg:     #f1f3f7;  --wash-none-bd:  #dfe3ea;  --wash-none-fg:  #6b7385;
+
+  /* Geometry ------------------------------------------------------ */
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 12px;
+  --r-pill: 999px;
+
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 40px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+  --shadow-md: 0 2px 8px rgba(15, 23, 42, .06);
+  --shadow-lg: 0 8px 28px rgba(15, 23, 42, .12);
+
+  --sidebar-w: 232px;
+  --sidebar-w-collapsed: 68px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-xs: 11.5px; --fs-sm: 12.5px; --fs-md: 13.5px;
+  --fs-lg: 15px;   --fs-xl: 19px;   --fs-2xl: 25px;  --fs-hero: 30px;
+}
