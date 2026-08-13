@@ -2,7 +2,10 @@ import { el } from '../core/dom.js';
 import { icon } from './icons.js';
 import { num } from '../core/format.js';
 import { state, setState } from '../core/store.js';
-import { EMPTY_LABELS, MATURITY_PASS_THRESHOLD } from '../data/schema.js';
+import { EMPTY_LABELS, MATURITY_PASS_THRESHOLD, POLICY_FALLBACK_LABEL } from '../data/schema.js';
+import { resolveRefs } from '../data/selectors.js';
+import { openDetailPane } from './detailPane.js';
+import { recordLink } from './links.js';
 
 /**
  * Maturity as a badge. The colour is a status role, and it is always paired
@@ -18,19 +21,58 @@ function maturityBadge(score) {
   return el('span.badge', { className: `badge badge-${tone}` }, `${score} / 5`);
 }
 
+const emptyCell = (label) =>
+  el('span.link-cell.is-empty', { title: 'Niet gekoppeld in de bronsheet' }, label);
+
 /**
- * Link cell for evidence / beleid / risico's. The sheet does not carry these
- * relations yet, so the empty state is the normal case, not an error.
+ * Evidence and risks open the detail pane: their content is a description plus
+ * a status or a source, which needs more room than a table cell.
  */
-function linkCell(items, verb, emptyLabel) {
-  if (!items || items.length === 0) {
-    return el('span.link-cell.is-empty', { title: 'Nog niet gekoppeld in de bronsheet' }, emptyLabel);
+function paneCell(control, kind, verb, emptyLabel) {
+  const ids = control[kind] || [];
+  if (!ids.length) return emptyCell(emptyLabel);
+
+  const { missing } = resolveRefs(ids, state.library[kind]);
+
+  return el('button.link-cell', {
+    type: 'button',
+    title: `${verb} — id ${ids.join(', ')}`,
+    onclick: () => openDetailPane({ control, kind }),
+  }, [
+    `${verb} (${ids.length})`,
+    missing.length
+      ? icon('alert', { size: 14 })
+      : icon('chevronUp', { size: 14 }),
+  ]);
+}
+
+/** How many policy links fit in a cell before the rest moves into the pane. */
+const POLICY_CELL_LIMIT = 2;
+
+/**
+ * Beleid skips the pane: a policy is a document, so the row links straight to
+ * it in a new tab, with the description as the anchor text.
+ */
+function policyCell(control) {
+  const ids = control.policies || [];
+  if (!ids.length) return emptyCell(EMPTY_LABELS.policies);
+
+  const { found, missing } = resolveRefs(ids, state.library.policies);
+  const shown = found.slice(0, POLICY_CELL_LIMIT);
+  const rest = found.length - shown.length + missing.length;
+
+  const links = shown.map((policy) =>
+    recordLink(policy, { label: policy.description, fallback: POLICY_FALLBACK_LABEL }));
+
+  if (!links.length || rest > 0) {
+    links.push(el('button.link-more', {
+      type: 'button',
+      title: `Alle gekoppelde beleidsstukken bij ${control.id}`,
+      onclick: () => openDetailPane({ control, kind: 'policies' }),
+    }, links.length ? `+${rest} meer` : `${ids.length} gekoppeld — bekijken`));
   }
-  return el('a.link-cell', {
-    href: '#/beheersmaatregelen',
-    title: items.join(', '),
-    onclick: (e) => e.preventDefault(),
-  }, [`${verb} (${items.length})`, icon('external', { size: 14 })]);
+
+  return el('.link-stack', links);
 }
 
 const COLUMNS = [
@@ -79,9 +121,9 @@ export function controlsTable(rows) {
     el('td.col-domain', control.domain || el('span.muted', 'Onbekend')),
     el('td.col-owner', control.owner || el('span.muted', 'Geen eigenaar')),
     el('td.is-center', maturityBadge(control.maturity)),
-    el('td.is-center', linkCell(control.evidence, 'Evidence bekijken', EMPTY_LABELS.evidence)),
-    el('td.is-center', linkCell(control.policies, 'Beleid bekijken', EMPTY_LABELS.policies)),
-    el('td.is-center', linkCell(control.risks, "Risico's bekijken", EMPTY_LABELS.risks)),
+    el('td.is-center', paneCell(control, 'evidence', 'Evidence', EMPTY_LABELS.evidence)),
+    el('td.is-center', policyCell(control)),
+    el('td.is-center', paneCell(control, 'risks', "Risico's", EMPTY_LABELS.risks)),
   ]));
 
   return el('.table-wrap', el('table.data', [

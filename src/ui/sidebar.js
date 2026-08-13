@@ -5,16 +5,19 @@ import { state, setState } from '../core/store.js';
 
 /**
  * Navigation. `enabled: false` renders the item but blocks the route — the
- * shape of the product stays visible while only Dashboard and
- * Beheersmaatregelen are live.
+ * shape of the product stays visible while Rapportages is still to come.
  */
 export const NAV = [
-  { route: 'dashboard',        label: 'Dashboard',          icon: 'grid',        enabled: true  },
+  { route: 'dashboard',          label: 'Dashboard',          icon: 'grid',        enabled: true  },
   { route: 'beheersmaatregelen', label: 'Beheersmaatregelen', icon: 'shieldCheck', enabled: true  },
-  { route: 'beleid',           label: 'Beleid',             icon: 'doc',         enabled: false },
-  { route: 'risicos',          label: "Risico's",           icon: 'alert',       enabled: false },
-  { route: 'rapportages',      label: 'Rapportages',        icon: 'chart',       enabled: false },
+  { route: 'evidence',           label: 'Evidence',           icon: 'clipboard',   enabled: true  },
+  { route: 'beleid',             label: 'Beleid',             icon: 'doc',         enabled: true  },
+  { route: 'risicos',            label: "Risico's",           icon: 'alert',       enabled: true  },
+  { route: 'rapportages',        label: 'Rapportages',        icon: 'chart',       enabled: false },
 ];
+
+/** Routes that list a linked register rather than the controls themselves. */
+export const LIBRARY_ROUTES = new Set(['evidence', 'beleid', 'risicos']);
 
 export function renderSidebar(host) {
   const active = currentRoute();

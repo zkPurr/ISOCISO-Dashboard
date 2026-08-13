@@ -1,11 +1,13 @@
 /**
  * Demo dataset: the 93 real ISO/IEC 27002:2022 controls, so the dashboard is
- * explorable before the (still evolving) Excel sheet is imported. Owners and
- * maturity scores are fabricated but deterministic — the numbers do not move
- * between reloads. Importing a file replaces this entirely.
+ * explorable before the (still evolving) Excel sheet is imported. Owners,
+ * maturity scores and the links into the three registers are fabricated but
+ * deterministic — nothing moves between reloads. Importing a file replaces
+ * this entirely.
  */
 
-import { buildControl } from './schema.js';
+import { buildControl, refKey } from './schema.js';
+import { toLink } from '../core/url.js';
 
 const ORG = 'Organizational';
 const PEO = 'People';
@@ -132,6 +134,107 @@ function hash(str) {
 /** Weighted so the mix looks like a real, partly-mature programme. */
 const SCORE_CURVE = [1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, null];
 
+/* ------------------------------------------------------------------
+   The three registers the controls sheet points at. [id, description,
+   link] — with two deliberately awkward links, because a real register
+   always has some: one network path and one empty cell.
+   ------------------------------------------------------------------ */
+
+const EVIDENCE_ROWS = [
+  [1,  'Informatiebeveiligingsbeleid, vastgesteld door de directie', 'https://intranet.example.com/isms/beleid-2024.pdf'],
+  [2,  'Notulen directiebeoordeling ISMS Q1', 'https://intranet.example.com/isms/mr-q1.docx'],
+  [3,  'Rollen- en verantwoordelijkhedenmatrix (RACI)', 'https://intranet.example.com/isms/raci.xlsx'],
+  [4,  'Registratie bedrijfsmiddelen (CMDB-export)', 'https://cmdb.example.com/reports/assets'],
+  [5,  'Classificatierichtlijn informatie', 'https://intranet.example.com/isms/classificatie.pdf'],
+  [6,  'Toegangsmatrix kritieke applicaties', 'https://intranet.example.com/iam/toegangsmatrix.xlsx'],
+  [7,  'Kwartaalrapportage toegangsreview', 'https://iam.example.com/reviews/2024-q1'],
+  [8,  'Screeningsprocedure nieuwe medewerkers', 'https://hr.example.com/beleid/screening'],
+  [9,  'Deelnamerapport security-awarenesstraining', 'https://learning.example.com/reports/awareness'],
+  [10, 'Getekende geheimhoudingsverklaringen', '\\\\fileserver\\HR\\NDA\\2024'],
+  [11, 'Plattegrond fysieke beveiligingszones', 'https://facility.example.com/zones.pdf'],
+  [12, 'Logboek bezoekersregistratie', ''],
+  [13, 'Onderhoudscontract klimaatbeheersing serverruimte', 'https://facility.example.com/contracten/klimaat'],
+  [14, 'Configuratiebaseline werkplekken (Intune)', 'https://endpoint.example.com/baselines/workplace'],
+  [15, 'Maandrapportage patchmanagement', 'https://itops.example.com/reports/patching'],
+  [16, 'Kwetsbaarhedenscan externe infrastructuur', 'https://scan.example.com/rapporten/extern-2024-03'],
+  [17, 'Back-up- en hersteltestrapport', 'https://itops.example.com/reports/restore-test'],
+  [18, 'SIEM-dashboard en alerteringsregels', 'https://siem.example.com/dashboards/detectie'],
+  [19, 'Pentestrapport klantportaal', 'https://security.example.com/pentest/portaal-2024.pdf'],
+  [20, 'Wijzigingsregistratie productieomgeving', 'https://itsm.example.com/changes'],
+  [21, 'Leveranciersbeoordelingen en DPIA-dossiers', 'https://procurement.example.com/leveranciers'],
+  [22, 'Evaluatierapport incidentoefening', 'https://security.example.com/oefeningen/2024-tabletop.pdf'],
+];
+
+const POLICY_ROWS = [
+  [1,  'Informatiebeveiligingsbeleid', 'https://intranet.example.com/beleid/informatiebeveiliging'],
+  [2,  'Toegangsbeleid en autorisatiebeheer', 'https://intranet.example.com/beleid/toegang'],
+  [3,  'Beleid aanvaardbaar gebruik', 'https://intranet.example.com/beleid/aanvaardbaar-gebruik'],
+  [4,  'Classificatie- en labelingbeleid', 'https://intranet.example.com/beleid/classificatie'],
+  [5,  'Personeelsbeleid informatiebeveiliging', 'https://intranet.example.com/beleid/personeel'],
+  [6,  'Fysiek beveiligingsbeleid', 'https://intranet.example.com/beleid/fysiek'],
+  [7,  'Cryptografiebeleid', 'https://intranet.example.com/beleid/cryptografie'],
+  [8,  'Back-up- en continuïteitsbeleid', 'https://intranet.example.com/beleid/continuiteit'],
+  [9,  'Beleid veilige softwareontwikkeling', 'https://intranet.example.com/beleid/sdlc'],
+  [10, 'Leveranciers- en uitbestedingsbeleid', 'https://intranet.example.com/beleid/leveranciers'],
+  [11, 'Incidentmanagementbeleid', 'https://intranet.example.com/beleid/incidenten'],
+  [12, 'Cloudgebruiksbeleid', 'https://intranet.example.com/beleid/cloud'],
+];
+
+/** [id, description, status] — status is carried through but not yet used. */
+const RISK_ROWS = [
+  [1,  'Onbevoegde toegang tot klantgegevens door verouderde autorisaties', 'Open'],
+  [2,  'Datalek via onbeheerde eindpuntapparatuur', 'In behandeling'],
+  [3,  'Uitval serverruimte door falende klimaatbeheersing', 'Open'],
+  [4,  'Ransomware-infectie via phishing', 'In behandeling'],
+  [5,  'Onvoldoende herstelbaarheid van back-ups', 'Open'],
+  [6,  'Afhankelijkheid van één clouddienstverlener', 'Geaccepteerd'],
+  [7,  'Kwetsbaarheden in extern benaderbare applicaties', 'In behandeling'],
+  [8,  'Verlies van kennis bij vertrek sleutelmedewerkers', 'Geaccepteerd'],
+  [9,  'Niet-naleving AVG bij verwerking van PII', 'Open'],
+  [10, 'Onveilige configuratie van nieuwe cloudomgevingen', 'In behandeling'],
+  [11, 'Ongeautoriseerde wijzigingen in productie', 'Open'],
+  [12, 'Onvoldoende logging voor incidentonderzoek', ''],
+  [13, 'Compromittering van de toeleveringsketen', 'Open'],
+  [14, 'Fysieke diefstal van apparatuur buiten kantoor', 'Geaccepteerd'],
+];
+
+/** Turns a demo row into the same record shape the importer produces. */
+function toRecord([id, description, third], { hasLink }) {
+  const record = {
+    id: refKey(id),
+    rawId: String(id),
+    description,
+    link: toLink(hasLink ? third : ''),
+  };
+  if (!hasLink) record.status = third;
+  return record;
+}
+
+export function buildDemoLibrary() {
+  return {
+    evidence: EVIDENCE_ROWS.map((row) => toRecord(row, { hasLink: true })),
+    policies: POLICY_ROWS.map((row) => toRecord(row, { hasLink: true })),
+    risks: RISK_ROWS.map((row) => toRecord(row, { hasLink: false })),
+  };
+}
+
+/**
+ * Spreads register ids over the controls the way a half-finished sheet does:
+ * plenty of gaps, a few controls with several links.
+ */
+function pickRefs(seed, rows, counts) {
+  const count = counts[seed % counts.length];
+  const ids = new Set();
+  for (let i = 0; i < count; i += 1) {
+    ids.add(String(rows[(seed + i * 7 + i) % rows.length][0]));
+  }
+  return [...ids];
+}
+
+const EVIDENCE_COUNTS = [0, 0, 1, 1, 1, 2, 2, 3];
+const POLICY_COUNTS = [0, 1, 1, 1, 2, 2];
+const RISK_COUNTS = [0, 0, 1, 1, 2];
+
 export function buildDemoControls() {
   const map = { rawId: 0, title: 1, domain: 2 };
 
@@ -141,11 +244,25 @@ export function buildDemoControls() {
     const control = buildControl(row, map);
     control.owner = owners[seed % owners.length];
     control.maturity = SCORE_CURVE[seed % SCORE_CURVE.length];
+    control.evidence = pickRefs(seed, EVIDENCE_ROWS, EVIDENCE_COUNTS);
+    control.policies = pickRefs(seed >> 3, POLICY_ROWS, POLICY_COUNTS);
+    control.risks = pickRefs(seed >> 6, RISK_ROWS, RISK_COUNTS);
     return control;
   });
 }
 
 export function demoSource() {
+  const library = buildDemoLibrary();
+  const sheet = (key, name) => ({
+    sheetName: `${name} (demo)`,
+    count: library[key].length,
+    skippedRows: 0,
+    duplicates: 0,
+    brokenLinks: library[key].filter((r) => !r.link.ok && r.link.reason !== 'empty').length,
+    mapped: ['rawId', 'description', key === 'risks' ? 'status' : 'url'],
+    unmatched: [],
+  });
+
   return {
     fileName: 'Demoset ISO 27002:2022',
     sheetName: '—',
@@ -153,8 +270,13 @@ export function demoSource() {
     rowCount: ROWS.length,
     skippedRows: 0,
     headerRowIndex: 1,
-    mapped: ['rawId', 'title', 'domain', 'owner', 'maturity'],
+    mapped: ['rawId', 'title', 'domain', 'owner', 'maturity', 'evidence', 'policies', 'risks'],
     unmatched: [],
+    libraries: {
+      evidence: sheet('evidence', 'Evidence'),
+      policies: sheet('policies', 'Beleid'),
+      risks: sheet('risks', 'Risk'),
+    },
     isDemo: true,
   };
 }

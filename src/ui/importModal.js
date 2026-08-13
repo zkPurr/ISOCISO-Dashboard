@@ -2,10 +2,11 @@ import { el } from '../core/dom.js';
 import { icon } from './icons.js';
 import { dateTime, num } from '../core/format.js';
 import { state, setState } from '../core/store.js';
-import { FIELDS } from '../data/schema.js';
+import { FIELDS, LOOKUP_SHEETS } from '../data/schema.js';
 import { importWorkbook } from '../data/importer.js';
-import { buildDemoControls, demoSource } from '../data/demo.js';
+import { buildDemoControls, buildDemoLibrary, demoSource } from '../data/demo.js';
 import { clear as clearStorage } from '../data/persist.js';
+import { closeDetailPane } from './detailPane.js';
 import { toast } from './toast.js';
 
 let backdrop = null;
@@ -20,19 +21,34 @@ function onKeydown(e) {
   if (e.key === 'Escape') closeImportModal();
 }
 
+/** "Evidence 22 · Beleid 12 · Risico's 14", or the reason a sheet was skipped. */
+function librarySummary(libraries) {
+  return LOOKUP_SHEETS.map((definition) => {
+    const info = libraries?.[definition.key];
+    return info?.sheetName
+      ? `${definition.label} ${num(info.count)}`
+      : `${definition.label} niet gevonden`;
+  }).join(' · ');
+}
+
 async function handleFile(file, statusNode) {
   if (!file) return;
 
   statusNode.replaceChildren(el('span.muted', `Bezig met inlezen van ${file.name}…`));
   try {
-    const { controls, report } = await importWorkbook(file);
-    setState({ controls, source: report, page: 1 });
+    const { controls, library, report } = await importWorkbook(file);
+    closeDetailPane();
+    setState({ controls, library, source: report, page: 1, libraryQuery: '' });
     closeImportModal();
 
     const extra = report.unmatched.length
       ? ` ${report.unmatched.length} kolom(men) niet herkend en overgeslagen.`
       : '';
-    toast(`${num(controls.length)} controls geïmporteerd uit ${report.fileName}.${extra}`, 'success');
+    toast(
+      `${num(controls.length)} controls geïmporteerd uit ${report.fileName}. ` +
+      `${librarySummary(report.libraries)}.${extra}`,
+      'success',
+    );
   } catch (err) {
     statusNode.replaceChildren(el('.hint', { style: { color: 'var(--wash-fail-fg)' } }, err.message));
     toast('Import mislukt — zie het venster voor details.', 'error');
@@ -40,14 +56,28 @@ async function handleFile(file, statusNode) {
 }
 
 function loadDemo() {
-  setState({ controls: buildDemoControls(), source: demoSource(), page: 1 });
+  closeDetailPane();
+  setState({
+    controls: buildDemoControls(),
+    library: buildDemoLibrary(),
+    source: demoSource(),
+    page: 1,
+    libraryQuery: '',
+  });
   closeImportModal();
   toast('Demoset met 93 ISO 27002:2022 controls geladen.', 'success');
 }
 
 function clearAll() {
   clearStorage();
-  setState({ controls: [], source: null, page: 1 });
+  closeDetailPane();
+  setState({
+    controls: [],
+    library: { evidence: [], policies: [], risks: [] },
+    source: null,
+    page: 1,
+    libraryQuery: '',
+  });
   closeImportModal();
   toast('Alle geïmporteerde data gewist.');
 }
@@ -86,6 +116,10 @@ export function openImportModal() {
     .map((f) => `<code>${f.label}</code>${f.required ? ' (verplicht)' : ''}`)
     .join(', ');
 
+  const sheetList = LOOKUP_SHEETS
+    .map((s) => `<code>${s.label}</code> (${s.fields.map((f) => f.label).join(', ')})`)
+    .join(', ');
+
   const current = state.source && el('.hint', [
     el('strong', 'Huidige dataset: '),
     `${state.source.fileName} — ${num(state.source.rowCount)} controls, ingelezen ${dateTime(state.source.importedAt)}.`,
@@ -102,9 +136,15 @@ export function openImportModal() {
       fileInput,
       status,
       el('.hint', {
-        html: `Het eerste werkblad wordt gelezen; de headerrij wordt automatisch gezocht in de eerste 15 rijen. ` +
-              `Herkende kolommen: ${columnList}. Kolommen die nog ontbreken worden leeg gelaten — ` +
-              `dat is geen fout.`,
+        html: `Het eerste werkblad is de controlsheet; de headerrij wordt automatisch gezocht in de ` +
+              `eerste 15 rijen. Herkende kolommen: ${columnList}. Kolommen die ontbreken worden leeg ` +
+              `gelaten — dat is geen fout.`,
+      }),
+      el('.hint', {
+        html: `De werkbladen ${sheetList} worden er los bij gelezen en gekoppeld op de id's die in de ` +
+              `kolommen <code>Evidence</code>, <code>Beleid</code> en <code>Risico's</code> staan ` +
+              `(meerdere per cel mag: <code>1, 4, 7</code>). Ontbreekt zo'n werkblad, dan blijft de ` +
+              `bijbehorende pagina simpelweg leeg.`,
       }),
       current,
     ]),

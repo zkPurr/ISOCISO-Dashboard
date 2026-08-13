@@ -4,8 +4,10 @@ import { defineRoutes, startRouter, resolve, currentRoute, navigate } from './co
 import { save, load } from './data/persist.js';
 import { renderSidebar, NAV } from './ui/sidebar.js';
 import { renderTopbar } from './ui/topbar.js';
+import { closeDetailPane } from './ui/detailPane.js';
 import { dashboardView } from './views/dashboard.js';
 import { controlsView } from './views/controls.js';
+import { evidenceView, beleidView, risicosView } from './views/library.js';
 import { placeholderView } from './views/placeholder.js';
 
 const app = document.getElementById('app');
@@ -17,6 +19,9 @@ const viewHost = document.getElementById('view');
 const ROUTES = {
   dashboard: dashboardView,
   beheersmaatregelen: controlsView,
+  evidence: evidenceView,
+  beleid: beleidView,
+  risicos: risicosView,
 };
 
 function viewFor(route) {
@@ -26,6 +31,7 @@ function viewFor(route) {
 }
 
 let scheduled = false;
+let renderedRoute = null;
 
 /** Batch renders — several setState calls in one tick paint once. */
 function scheduleRender() {
@@ -37,6 +43,13 @@ function scheduleRender() {
 function render() {
   const route = currentRoute();
   const view = viewFor(route);
+
+  // The detail pane belongs to the row it was opened from — leaving the page
+  // (browser back included) closes it rather than stranding it over a new view.
+  if (route !== renderedRoute) {
+    closeDetailPane();
+    renderedRoute = route;
+  }
 
   const focus = captureFocus();
 
@@ -58,6 +71,7 @@ function render() {
 function persist() {
   save({
     controls: state.controls,
+    library: state.library,
     source: state.source,
     ui: state.ui,
     pageSize: state.pageSize,
@@ -68,6 +82,7 @@ function boot() {
   const saved = load();
   if (saved) {
     state.controls = saved.controls;
+    state.library = saved.library;
     state.source = saved.source ?? null;
     if (saved.ui) Object.assign(state.ui, saved.ui);
     if (saved.pageSize) state.pageSize = saved.pageSize;
@@ -81,7 +96,10 @@ function boot() {
 // Keeps the view honest if another tab imports a different sheet.
 window.addEventListener('storage', () => {
   const saved = load();
-  if (saved) setState({ controls: saved.controls, source: saved.source ?? null });
+  if (saved) {
+    closeDetailPane();
+    setState({ controls: saved.controls, library: saved.library, source: saved.source ?? null });
+  }
 });
 
 boot();

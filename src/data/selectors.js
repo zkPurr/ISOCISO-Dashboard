@@ -1,4 +1,4 @@
-import { DOMAIN_ORDER, DOMAIN_UNKNOWN, MATURITY_PASS_THRESHOLD } from './schema.js';
+import { DOMAIN_ORDER, DOMAIN_UNKNOWN, MATURITY_PASS_THRESHOLD, refKey } from './schema.js';
 import { compareControlId } from '../core/format.js';
 
 export const isPassed = (control) =>
@@ -101,6 +101,84 @@ export function applySort(controls, { key, dir }) {
     }
     const cmp = COLLATOR.compare(a[key] ?? '', b[key] ?? '');
     return cmp * factor || compareControlId(a.id, b.id);
+  });
+}
+
+/* ------------------------------------------------------------------
+   Links between the controls sheet and the Evidence / Beleid / Risk
+   registers. Both directions are needed: a control lists record ids,
+   and a register row wants to know which controls point at it.
+   ------------------------------------------------------------------ */
+
+// Keyed on the array itself, so a fresh import invalidates the index for free.
+const indexCache = new WeakMap();
+
+/** id -> record, built once per register array. */
+export function libraryIndex(records = []) {
+  let index = indexCache.get(records);
+  if (!index) {
+    index = new Map(records.map((record) => [record.id, record]));
+    indexCache.set(records, index);
+  }
+  return index;
+}
+
+/**
+ * Resolves the ids in a control's cell against a register.
+ * Unknown ids are kept in `missing` rather than dropped — a typo in the sheet
+ * should be visible in the UI, not silently swallowed.
+ */
+export function resolveRefs(ids, records = []) {
+  const index = libraryIndex(records);
+  const found = [];
+  const missing = [];
+  const seen = new Set();
+
+  for (const raw of ids || []) {
+    const key = refKey(raw);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    const record = index.get(key);
+    if (record) found.push(record);
+    else missing.push(String(raw).trim());
+  }
+  return { found, missing, total: found.length + missing.length };
+}
+
+/** Reverse index: record id -> the controls that reference it. */
+export function controlsByRef(controls, key) {
+  const map = new Map();
+  for (const control of controls) {
+    for (const raw of control[key] || []) {
+      const id = refKey(raw);
+      if (!id) continue;
+      if (!map.has(id)) map.set(id, []);
+      const list = map.get(id);
+      if (!list.includes(control)) list.push(control);
+    }
+  }
+  return map;
+}
+
+/** Numeric-first ordering, so 2 comes before 10 and "R-01" still sorts sanely. */
+export function compareRef(a, b) {
+  const na = Number(a.id);
+  const nb = Number(b.id);
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+  if (Number.isFinite(na)) return -1;
+  if (Number.isFinite(nb)) return 1;
+  return COLLATOR.compare(a.id, b.id);
+}
+
+/** Free-text search across a register, over every field the user can see. */
+export function filterLibrary(records, query) {
+  const needle = String(query ?? '').trim().toLowerCase();
+  if (!needle) return records;
+
+  return records.filter((record) => {
+    const haystack = `${record.rawId} ${record.description} ${record.status ?? ''} ${record.link?.raw ?? ''}`;
+    return haystack.toLowerCase().includes(needle);
   });
 }
 

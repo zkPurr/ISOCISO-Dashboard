@@ -8,8 +8,19 @@ const listeners = new Set();
 export const state = {
   /** @type {import('../data/schema.js').Control[]} */
   controls: [],
-  /** Metadata about the last import: { fileName, importedAt, rowCount, mapped, missing, isDemo }. */
+
+  /**
+   * The registers the controls sheet points at by id. One array per
+   * LOOKUP_SHEETS key; an absent worksheet simply leaves its array empty.
+   * @type {Record<'evidence'|'policies'|'risks', import('../data/schema.js').LookupRecord[]>}
+   */
+  library: { evidence: [], policies: [], risks: [] },
+
+  /** Metadata about the last import: { fileName, importedAt, rowCount, mapped, libraries, isDemo }. */
   source: null,
+
+  /** Search box on the Evidence / Beleid / Risico's pages — separate from the control filters. */
+  libraryQuery: '',
 
   filters: {
     query: '',

@@ -196,8 +196,11 @@
   padding: var(--sp-4) var(--sp-5);
 }
 .filterbar .search { align-self: end; }
+/* The register pages filter on one field only, so their bar is search + count. */
+.filterbar-single { grid-template-columns: minmax(200px, 1.6fr) 1fr auto; align-items: center; }
 @media (max-width: 1200px) {
   .filterbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filterbar-single { grid-template-columns: minmax(0, 1fr) auto; }
 }
 
 /* ---------------------------------------------------------------- Table */
@@ -241,11 +244,122 @@ td.col-domain, td.col-owner { white-space: nowrap; }
 .sort-caret { color: var(--text-muted); }
 .sort-caret.is-active { color: var(--brand); }
 
-/* Cell links to (future) linked records */
-.link-cell { display: inline-flex; align-items: center; gap: 5px; font-weight: 550; white-space: nowrap; }
-/* "Geen … gekoppeld" is the normal state for now, so it is muted and set a
-   size down — it must not compete with the real data in the row. */
-.link-cell.is-empty { color: var(--text-muted); font-weight: 450; font-size: var(--fs-sm); font-style: italic; }
+td.col-ref { white-space: nowrap; vertical-align: top; }
+
+/* Cell links to the Evidence / Beleid / Risk registers */
+.link-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 550;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--brand-ink);
+  cursor: pointer;
+}
+button.link-cell:hover { background: var(--brand-soft); border-color: var(--brand-soft); }
+button.link-cell:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+/* "Geen … gekoppeld" stays the normal state for plenty of rows, so it is muted
+   and set a size down — it must not compete with the real data in the row. */
+.link-cell.is-empty {
+  color: var(--text-muted);
+  font-weight: 450;
+  font-size: var(--fs-sm);
+  font-style: italic;
+  cursor: default;
+}
+
+/* Beleid links straight out, so its cell can hold more than one anchor. The
+   width is capped: a long document title must not stretch the whole table. */
+.link-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  max-width: 190px;
+  margin: 0 auto;
+}
+
+.link, .link-dead {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 550;
+  min-width: 0;
+  max-width: 100%;
+}
+.link { color: var(--brand-ink); text-decoration: none; }
+.link:hover { text-decoration: underline; }
+.link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 2px; }
+/* A cell that could not be turned into a URL: shown, but never as an anchor. */
+.link-dead { color: var(--text-muted); font-weight: 450; font-style: italic; cursor: help; }
+.link-dead > svg { color: var(--wash-warn-fg); }
+.link-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.url-text {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.link-more {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  color: var(--brand-ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.link-more:hover { text-decoration: underline; }
+
+/* Register row id, and the chips that show which controls point at it */
+.ref-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 2px 7px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ref-badge.is-missing {
+  background: var(--wash-warn-bg);
+  border-color: var(--wash-warn-bd);
+  color: var(--wash-warn-fg);
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+button.chip:hover { background: var(--brand-soft); border-color: var(--brand-soft); color: var(--brand-ink); }
+.chip.is-quiet { color: var(--text-muted); font-weight: 450; cursor: default; }
 
 /* ---------------------------------------------------------------- Badges */
 .badge {
@@ -342,6 +456,74 @@ td.col-domain, td.col-owner { white-space: nowrap; }
   padding: var(--sp-4) var(--sp-5);
   border-top: 1px solid var(--border);
 }
+
+/* ---------------------------------------------------------------- Detail pane
+   A bottom sheet rather than a centred dialog: it opens next to the row you
+   clicked, and the table above it stays readable while you scan the links. */
+.pane-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, .35);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 85;
+  animation: pane-fade .15s ease;
+}
+.pane {
+  width: min(860px, 100%);
+  max-height: min(62vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+  animation: pane-up .22s cubic-bezier(.22, .8, .3, 1);
+}
+@keyframes pane-fade { from { opacity: 0; } }
+@keyframes pane-up { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .pane, .pane-backdrop { animation: none; }
+}
+
+.pane-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+.pane-head-main { min-width: 0; }
+.pane-eyebrow {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--brand-ink);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.pane-title { font-size: var(--fs-lg); font-weight: 600; margin-top: 3px; }
+.pane-body { overflow-y: auto; padding: var(--sp-2) var(--sp-5); }
+.pane-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.linkrow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.linkrow:last-child { border-bottom: 0; }
+.linkrow-body { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.linkrow-title { font-size: var(--fs-md); line-height: 1.45; }
+.linkrow-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; font-size: var(--fs-sm); }
+.meta-key { color: var(--text-muted); min-width: 46px; }
+.linkrow.is-warning { color: var(--text-secondary); }
+.linkrow.is-warning > svg { color: var(--wash-warn-fg); flex: none; margin-top: 2px; }
 
 .dropzone {
   border: 2px dashed var(--border-strong);

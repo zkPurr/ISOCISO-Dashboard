@@ -2,7 +2,7 @@ import { el } from '../core/dom.js';
 import { icon } from '../ui/icons.js';
 import { openImportModal } from '../ui/importModal.js';
 import { setState } from '../core/store.js';
-import { buildDemoControls, demoSource } from '../data/demo.js';
+import { buildDemoControls, buildDemoLibrary, demoSource } from '../data/demo.js';
 import { toast } from '../ui/toast.js';
 
 /** Shown on every data-driven view while nothing has been imported. */
@@ -21,7 +21,12 @@ export function noDataView() {
       el('button.btn', {
         type: 'button',
         onclick: () => {
-          setState({ controls: buildDemoControls(), source: demoSource(), page: 1 });
+          setState({
+            controls: buildDemoControls(),
+            library: buildDemoLibrary(),
+            source: demoSource(),
+            page: 1,
+          });
           toast('Demoset met 93 ISO 27002:2022 controls geladen.', 'success');
         },
       }, 'Demoset bekijken'),
