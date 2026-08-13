@@ -3,6 +3,7 @@ import { icon } from './icons.js';
 import { state, setState, setFilter } from '../core/store.js';
 import { currentRoute, navigate } from '../core/router.js';
 import { openImportModal } from './importModal.js';
+import { SEARCH_HELP } from './filters.js';
 import { NAV, LIBRARY_ROUTES } from './sidebar.js';
 
 const TITLES = {
@@ -27,6 +28,7 @@ export function renderTopbar(host) {
         ? `Zoek in ${nav.label.toLowerCase()}...`
         : "Zoek controls, beleid, risico's...",
       'aria-label': 'Globaal zoeken',
+      title: isLibrary ? null : SEARCH_HELP,
       dataset: { focusId: 'global-search' },
       oninput: (e) => {
         if (isLibrary) {

@@ -1,4 +1,5 @@
 import { DOMAIN_ORDER, DOMAIN_UNKNOWN, MATURITY_PASS_THRESHOLD, refKey } from './schema.js';
+import { parseQuery, matchesQuery } from './query.js';
 import { compareControlId } from '../core/format.js';
 
 export const isPassed = (control) =>
@@ -61,13 +62,12 @@ export function domainOptions(controls) {
 }
 
 export function applyFilters(controls, filters) {
-  const query = filters.query.trim().toLowerCase();
+  // Parsed once per call, not once per row — the syntax check is the same for
+  // every control.
+  const query = parseQuery(filters.query);
 
   return controls.filter((control) => {
-    if (query) {
-      const haystack = `${control.id} ${control.title} ${control.owner} ${control.domain}`.toLowerCase();
-      if (!haystack.includes(query)) return false;
-    }
+    if (!matchesQuery(control, query)) return false;
     if (filters.owner && control.owner !== filters.owner) return false;
     if (filters.domain && control.domain !== filters.domain) return false;
 

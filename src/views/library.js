@@ -6,6 +6,7 @@ import { state, setState, setFilter } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { LOOKUP_BY_KEY, POLICY_FALLBACK_LABEL } from '../data/schema.js';
 import { controlsByRef, compareRef, filterLibrary } from '../data/selectors.js';
+import { exactControlQuery } from '../data/query.js';
 import { recordLink, refBadge } from '../ui/links.js';
 import { openImportModal } from '../ui/importModal.js';
 import { noDataView } from './emptyState.js';
@@ -71,11 +72,12 @@ function linkedControls(controls) {
   const rest = controls.length - shown.length;
 
   return el('.chips', [
+    // Exact query, so A.5.1 does not also drag in A.5.10 and A.5.11.
     ...shown.map((control) => el('button.chip', {
       type: 'button',
-      title: control.title || control.id,
+      title: `${control.title || control.id} — open in de controltabel`,
       onclick: () => {
-        setFilter({ query: control.id });
+        setFilter({ query: exactControlQuery(control.id) });
         navigate('beheersmaatregelen');
       },
     }, control.id)),

@@ -4,6 +4,11 @@ import { state, setFilter, resetFilters } from '../core/store.js';
 import { ownerOptions, domainOptions } from '../data/selectors.js';
 import { MATURITY_PASS_THRESHOLD } from '../data/schema.js';
 
+/** Explains the exact-match syntax; shown on hover of either search box. */
+export const SEARCH_HELP =
+  'Zoekt op deel van de tekst. Wil je exact zoeken, zet het tussen aanhalingstekens '
+  + '("A.5.1") of geef een kolom op: Control_ID:"A.5.1", Owner:"GRC-team".';
+
 function select({ label, value, options, placeholder, onchange, focusId }) {
   return el('.field', [
     el('label.field-label', { for: focusId }, label),
@@ -34,6 +39,7 @@ export function filterBar(controls) {
         value: filters.query,
         placeholder: 'Zoek Control ID of beschrijving...',
         'aria-label': 'Zoek in de tabel',
+        title: SEARCH_HELP,
         dataset: { focusId: 'table-search' },
         oninput: (e) => setFilter({ query: e.target.value }),
       }),
