@@ -9,9 +9,16 @@ Klaar om te deployen op Netlify of Cloudflare Pages.
 ES-modules werken niet via `file://`, dus start een klein servertje:
 
 ```bash
-python3 -m http.server 8080
+python3 serve.py 8080
 # open http://localhost:8080
 ```
+
+Gebruik `serve.py` en niet `python3 -m http.server`: die laatste stuurt geen
+cache-headers mee, en dan bewaart de browser losse ES-modules. Na een wijziging
+heb je dan een oude module naast een nieuwe — de import lukt nog, maar valt dan
+om over wat er veranderd is, en je houdt een lege pagina over. Het valt pas op
+zodra je DevTools sluit, want "Disable cache" verbergt het. `serve.py` stuurt
+`no-store`; het image doet hetzelfde met `no-cache` (zie `nginx.conf`).
 
 ## Deployen
 
@@ -129,6 +136,25 @@ zonder tijd, AM/PM of 24-uurs) en anders als ISO-datum — een export die door
 Excel is gegaan komt zo vaak terug. De originele celtekst blijft in de tooltip
 staan.
 
+### Het bordoverzicht
+
+Boven de tabel staan drie ringdiagrammen: **per behandelaar**, **per status** en
+**per label**. Naast elke ring staat de legenda met naam, aantal en percentage;
+hover over een schijf of een legendaregel voor hetzelfde detail.
+
+Ze tonen bewust het **hele bord**, niet je huidige zoekopdracht. Een kleur hoort
+bij een persoon, niet bij diens plek in de ranglijst — filteren zou de schijven
+onder je handen laten verkleuren. De tabel eronder beantwoordt "wat past bij wat
+ik typ", het paneel beantwoordt "hoe staat dit bord ervoor".
+
+Meer dan zes categorieën passen niet in een leesbare ring: naast elkaar zijn
+kleuren dan niet meer uit elkaar te houden. De zes grootste krijgen een eigen
+kleur, de rest gaat samen onder **Overig** — hover daarover en je ziet welke
+erin zitten. `Status` is de volledige status, niet de grovere `Status Category`.
+
+Bij **per label** telt een taak bij elk label mee dat hij draagt, dus het totaal
+is hoger dan het aantal taken; dat staat er onder het diagram bij.
+
 ### Actie Nodig — de deadlinevlag
 
 Ook de takentabel begint met de kolom **Actie Nodig**, op dezelfde 1-2-3 schaal
@@ -198,6 +224,7 @@ src/
     xlsx.js         SheetJS, lazy geladen — gedeeld door beide importers
     tasks.js        ← Jira-kolommen, datums, prioriteit, deadlinevlag
     taskImporter.js Jira CSV → taken (alle kolommen)
+    taskStats.js    verdelingen achter de ringdiagrammen (met "Overig"-vouw)
     selectors.js    filteren, sorteren, pagineren, KPI's, koppelingen
     query.js        zoeksyntax: substring, "exact" en Kolom:"exact"
     persist.js      localStorage
@@ -244,7 +271,9 @@ standaardkolommen (`DEFAULT_ROLES`).
 
 **Kleuren aanpassen** — alles staat in `assets/css/tokens.css`. De chartkleuren
 zijn gecontroleerd op kleurenblindheid-scheiding; pas je ze aan, valideer dan
-opnieuw.
+opnieuw. `--series-1` t/m `--series-6` zijn de categorische reeks voor de
+ringdiagrammen, in vaste volgorde toegekend — nooit doorgedraaid, en nooit
+uitgebreid met een zevende gegenereerde tint (daar is `Overig` voor).
 
 ## Werkende pagina's
 

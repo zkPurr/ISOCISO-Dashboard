@@ -1,6 +1,6 @@
 import { matchHeaders, buildControl, buildRecord, refKey, LOOKUP_SHEETS } from './schema.js';
 import { toLink, bestLink } from '../core/url.js';
-import { loadXlsx } from './xlsx.js';
+import { loadXlsx, readWorkbook } from './xlsx.js';
 
 /**
  * The header row is not always row 1 in practice (title rows, logos, blank
@@ -162,11 +162,10 @@ function readLookupSheets(XLSX, workbook, controlsSheetName) {
  */
 export async function importWorkbook(file) {
   const XLSX = await loadXlsx();
-  const buffer = await file.arrayBuffer();
 
   let workbook;
   try {
-    workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    workbook = await readWorkbook(XLSX, file, { cellDates: true });
   } catch (err) {
     throw new Error('Dit bestand kon niet gelezen worden als Excel of CSV.', { cause: err });
   }

@@ -2,8 +2,10 @@ import { el } from '../core/dom.js';
 import { icon } from '../ui/icons.js';
 import { num, dateTime } from '../core/format.js';
 import { state, setState } from '../core/store.js';
-import { selectTaskView, visibleColumns } from '../data/selectors.js';
+import { selectTaskView, tasksForProject, visibleColumns } from '../data/selectors.js';
 import { dueSeverity, TASK_PROJECTS } from '../data/tasks.js';
+import { distribution, assigneeOf, statusOf, labelsOf } from '../data/taskStats.js';
+import { donutChart } from '../charts/donut.js';
 import { taskTable } from '../ui/taskTable.js';
 import { columnPicker } from '../ui/columnPicker.js';
 import { tableFooter } from '../ui/pagination.js';
@@ -81,6 +83,64 @@ function toolbar(view, project) {
   ]);
 }
 
+/**
+ * The board at a glance: who has the work, what state it is in, what it is
+ * tagged with.
+ *
+ * Deliberately the whole board, not the current search — a hue belongs to an
+ * assignee, not to their rank, so a filter that reshuffles the counts must not
+ * repaint the slices underneath you. The table below answers "what matches
+ * what I typed"; this panel answers "what does this board look like".
+ */
+function boardCharts(tasks, columns, project) {
+  const byAssignee = distribution(tasks, assigneeOf(columns), { emptyLabel: 'Niet toegewezen' });
+  const byStatus = distribution(tasks, statusOf(columns), { emptyLabel: 'Geen status' });
+  const byLabel = distribution(tasks, labelsOf(columns), { emptyLabel: 'Geen label' });
+
+  const foldNote = (result) => (result.folded
+    ? `${num(result.distinct)} in totaal — de kleinste ${result.folded === 1
+      ? 'staat' : `${num(result.folded)} staan`} onder "Overig".`
+    : null);
+
+  return el('.card', [
+    el('.card-head', [
+      el('.card-title', `${project.label} in één oogopslag`),
+      el('span.table-foot-info', `${num(tasks.length)} taken op dit bord`),
+    ]),
+    el('.card-body', el('.viz-grid-3', [
+      donutChart({
+        title: 'Per behandelaar',
+        centerValue: num(byAssignee.total),
+        segments: byAssignee.slices,
+        noun: 'taken',
+        legendPercent: true,
+        note: foldNote(byAssignee),
+      }),
+      donutChart({
+        title: 'Per status',
+        centerValue: num(byStatus.total),
+        segments: byStatus.slices,
+        noun: 'taken',
+        legendPercent: true,
+        note: foldNote(byStatus),
+      }),
+      donutChart({
+        title: 'Per label',
+        centerValue: num(byLabel.total),
+        segments: byLabel.slices,
+        noun: 'keer',
+        legendPercent: true,
+        // A task with three labels is counted three times, so this total is not
+        // the number of tasks — say so rather than let the numbers not add up.
+        note: byLabel.total === tasks.length
+          ? foldNote(byLabel)
+          : [`${num(byLabel.total)} labels over ${num(tasks.length)} taken — een taak met`,
+            'meerdere labels telt bij elk label mee.', foldNote(byLabel)].filter(Boolean).join(' '),
+      }),
+    ])),
+  ]);
+}
+
 /** How many rows on this board currently carry a flag, per level. */
 function flagSummary(tasks) {
   const now = new Date();
@@ -133,14 +193,16 @@ export function tasksView(project) {
     const columns = visibleColumns(state.taskColumns, state.taskVisible);
 
     return el('div', [
+      boardCharts(tasksForProject(state.tasks, project.key), state.taskColumns, project),
       toolbar(view, project),
       el('.card', [
         flagSummary(view.all),
         taskTable(view.rows, columns),
         tableFooter(view, {
           noun: 'taken',
+          pageSize: state.taskPageSize,
           onPage: (page) => setState({ taskPage: page }),
-          onPageSize: (size) => setState({ pageSize: size, taskPage: 1, page: 1 }),
+          onPageSize: (size) => setState({ taskPageSize: size, taskPage: 1 }),
         }),
       ]),
       sourceHint(),

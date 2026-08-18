@@ -35,6 +35,8 @@ export function load() {
       taskColumns: Array.isArray(parsed.taskColumns) ? parsed.taskColumns : [],
       taskVisible: Array.isArray(parsed.taskVisible) ? parsed.taskVisible : [],
       taskSource: parsed.taskSource ?? null,
+      taskSort: parsed.taskSort ?? null,
+      taskPageSize: parsed.taskPageSize ?? null,
     };
   } catch {
     return null;

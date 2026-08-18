@@ -3,7 +3,11 @@ import { icon } from './icons.js';
 import { num } from '../core/format.js';
 import { state, setState } from '../core/store.js';
 
-const PAGE_SIZES = [10, 25, 50, 100];
+// 0 is "Alles" — see paginate(). Kept as a number so it round-trips through
+// localStorage; Infinity does not survive JSON.
+const PAGE_SIZES = [10, 25, 50, 100, 0];
+
+const pageSizeLabel = (size) => (size ? `${size} / pagina` : 'Alles');
 
 /** Window of page numbers around the current page, with ellipsis gaps. */
 function pageNumbers(page, pageCount) {
@@ -35,6 +39,7 @@ export function tableFooter(
     noun = 'controls',
     onPage = (next) => setState({ page: next }),
     onPageSize = (size) => setState({ pageSize: size, page: 1 }),
+    pageSize = state.pageSize,
   } = {},
 ) {
   const buttons = pageNumbers(page, pageCount).map((entry) =>
@@ -77,6 +82,6 @@ export function tableFooter(
       dataset: { focusId: 'page-size' },
       onchange: (e) => onPageSize(Number(e.target.value)),
     }, PAGE_SIZES.map((size) =>
-      el('option', { value: size, selected: size === state.pageSize }, `${size} / pagina`))),
+      el('option', { value: size, selected: size === pageSize }, pageSizeLabel(size)))),
   ]);
 }

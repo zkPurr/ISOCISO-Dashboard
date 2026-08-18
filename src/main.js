@@ -83,6 +83,8 @@ function persist() {
     taskColumns: state.taskColumns,
     taskVisible: state.taskVisible,
     taskSource: state.taskSource,
+    taskSort: state.taskSort,
+    taskPageSize: state.taskPageSize,
     ui: state.ui,
     pageSize: state.pageSize,
   });
@@ -98,6 +100,10 @@ function boot() {
     state.taskColumns = saved.taskColumns;
     state.taskVisible = saved.taskVisible;
     state.taskSource = saved.taskSource;
+    // A payload from before these were persisted keeps the store's defaults;
+    // the sort is re-derived from the data on the next import anyway.
+    if (saved.taskSort) state.taskSort = saved.taskSort;
+    if (saved.taskPageSize != null) state.taskPageSize = saved.taskPageSize;
     if (saved.ui) Object.assign(state.ui, saved.ui);
     if (saved.pageSize) state.pageSize = saved.pageSize;
   }
@@ -110,18 +116,27 @@ function boot() {
 // Keeps the view honest if another tab imports a different sheet.
 window.addEventListener('storage', () => {
   const saved = load();
-  if (saved) {
-    closeDetailPane();
-    setState({
-      controls: saved.controls,
-      library: saved.library,
-      source: saved.source ?? null,
-      tasks: saved.tasks,
-      taskColumns: saved.taskColumns,
-      taskVisible: saved.taskVisible,
-      taskSource: saved.taskSource,
-    });
-  }
+  if (!saved) return;
+
+  closeDetailPane();
+  closeColumnPicker();
+
+  // Adopt the view preferences too, not just the data. Every render persists
+  // the whole snapshot, so a tab that kept its own sort and page size would
+  // write them straight back over the other tab's — the two would sit there
+  // reverting each other. Taking what arrived makes them converge instead.
+  setState({
+    controls: saved.controls,
+    library: saved.library,
+    source: saved.source ?? null,
+    tasks: saved.tasks,
+    taskColumns: saved.taskColumns,
+    taskVisible: saved.taskVisible,
+    taskSource: saved.taskSource,
+    ...(saved.taskSort ? { taskSort: saved.taskSort } : null),
+    ...(saved.taskPageSize != null ? { taskPageSize: saved.taskPageSize } : null),
+    ...(saved.pageSize ? { pageSize: saved.pageSize } : null),
+  });
 });
 
 boot();

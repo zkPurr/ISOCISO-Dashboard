@@ -2,7 +2,7 @@ import { el } from '../core/dom.js';
 import { icon } from './icons.js';
 import { dateTime, num } from '../core/format.js';
 import { state, setState } from '../core/store.js';
-import { DEFAULT_ROLES, TASK_FIELDS, TASK_PROJECTS } from '../data/tasks.js';
+import { DEFAULT_ROLES, TASK_FIELDS, TASK_PROJECTS, defaultTaskSort } from '../data/tasks.js';
 import { importTasks } from '../data/taskImporter.js';
 import { toast } from './toast.js';
 
@@ -38,6 +38,7 @@ async function handleFile(file, statusNode) {
       taskColumns: columns,
       taskVisible: visible,
       taskSource: report,
+      taskSort: defaultTaskSort(tasks, columns),
       taskQuery: '',
       taskPage: 1,
       taskColumnsOpen: false,

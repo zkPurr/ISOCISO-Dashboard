@@ -55,9 +55,15 @@ export const state = {
   /** Search box while on a Taken page — separate from the control filters. */
   taskQuery: '',
 
-  // Flagged rows on top by default: the point of the page is what needs action.
+  /**
+   * Set from the data on import — see defaultTaskSort(). This is only the
+   * value before anything has been imported.
+   */
   taskSort: { key: 'severity', dir: 'desc' },
   taskPage: 1,
+
+  /** Separate from the controls' page size: a task row is much denser. 0 = alles. */
+  taskPageSize: 100,
 
   /** Column picker open state. Deliberately not persisted. */
   taskColumnsOpen: false,

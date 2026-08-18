@@ -1,4 +1,4 @@
-import { loadXlsx } from './xlsx.js';
+import { loadXlsx, readWorkbook } from './xlsx.js';
 import { buildColumns, buildTask, defaultColumnKeys, TASK_FIELDS, TASK_PROJECTS } from './tasks.js';
 
 /**
@@ -48,11 +48,10 @@ function findHeaderRow(rows) {
  */
 export async function importTasks(file) {
   const XLSX = await loadXlsx();
-  const buffer = await file.arrayBuffer();
 
   let workbook;
   try {
-    workbook = XLSX.read(buffer, { type: 'array', raw: true });
+    workbook = await readWorkbook(XLSX, file, { raw: true });
   } catch (err) {
     throw new Error('Dit bestand kon niet gelezen worden als CSV.', { cause: err });
   }

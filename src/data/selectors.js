@@ -191,16 +191,18 @@ export function filterLibrary(records, query) {
   });
 }
 
+/** `pageSize` of 0 is the "Alles" option — everything on a single page. */
 export function paginate(rows, page, pageSize) {
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const size = pageSize > 0 ? pageSize : Math.max(rows.length, 1);
+  const pageCount = Math.max(1, Math.ceil(rows.length / size));
   const safePage = Math.min(Math.max(1, page), pageCount);
-  const start = (safePage - 1) * pageSize;
+  const start = (safePage - 1) * size;
   return {
-    rows: rows.slice(start, start + pageSize),
+    rows: rows.slice(start, start + size),
     page: safePage,
     pageCount,
     from: rows.length ? start + 1 : 0,
-    to: Math.min(start + pageSize, rows.length),
+    to: Math.min(start + size, rows.length),
     total: rows.length,
   };
 }
@@ -272,7 +274,7 @@ export function selectTaskView(state, project) {
   const filtered = filterTasks(mine, state.taskQuery);
   const sorted = sortTasks(filtered, state.taskSort, state.taskColumns);
   return {
-    ...paginate(sorted, state.taskPage, state.pageSize),
+    ...paginate(sorted, state.taskPage, state.taskPageSize),
     // `rows` is the current page; `all` is everything the filters left over —
     // a count over the whole selection must not change when you turn a page.
     all: sorted,

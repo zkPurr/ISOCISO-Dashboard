@@ -56,11 +56,15 @@ function ring(color) {
  * @param {{
  *   title: string,
  *   centerValue: string,
- *   segments: { label: string, value: number, color: string }[],
+ *   segments: { label: string, value: number, color: string, detail?: string[] }[],
  *   note?: string,
+ *   noun?: string,          What the values count, for the tooltip
+ *   legendPercent?: boolean Show the share next to the count in the legend
  * }} config
  */
-export function donutChart({ title, centerValue, segments, note }) {
+export function donutChart({
+  title, centerValue, segments, note, noun = 'controls', legendPercent = false,
+}) {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   const visible = segments.filter((s) => s.value > 0);
 
@@ -72,12 +76,18 @@ export function donutChart({ title, centerValue, segments, note }) {
     'aria-label': `${title}: ${segments.map((s) => `${s.label} ${s.value}`).join(', ')}`,
   });
 
+  const tooltipFor = (segment) => () => [
+    `<strong>${segment.label}</strong><br>${num(segment.value)} ${noun} · ${pct(segment.value, total)}%`,
+    // A fold is only honest if you can see what is inside it.
+    segment.detail?.length ? `<br>${segment.detail.join('<br>')}` : '',
+  ].join('');
+
   if (!total) {
     canvas.append(ring('var(--viz-neutral)'));
   } else if (visible.length === 1) {
     const only = visible[0];
     const full = ring(only.color);
-    attachTooltip(full, () => `<strong>${only.label}</strong><br>${num(only.value)} controls · 100%`);
+    attachTooltip(full, tooltipFor(only));
     canvas.append(full);
   } else {
     // Convert the 2px spacer into an angle at the mid-radius.
@@ -92,8 +102,7 @@ export function donutChart({ title, centerValue, segments, note }) {
       if (end <= start) continue;
 
       const path = svg('path', { d: arcPath(start, end), fill: segment.color });
-      attachTooltip(path, () =>
-        `<strong>${segment.label}</strong><br>${num(segment.value)} controls · ${pct(segment.value, total)}%`);
+      attachTooltip(path, tooltipFor(segment));
       canvas.append(path);
     }
   }
@@ -105,12 +114,17 @@ export function donutChart({ title, centerValue, segments, note }) {
         canvas,
         el('.donut-center', centerValue),
       ]),
-      el('.legend', segments.map((segment) =>
-        el('.legend-row', [
+      el('.legend', segments.map((segment) => {
+        const row = el('.legend-row', [
           el('.legend-swatch', { style: { background: segment.color } }),
-          el('.legend-name', segment.label),
-          el('.legend-value', num(segment.value)),
-        ]))),
+          el('.legend-name', { title: segment.label }, segment.label),
+          el('.legend-value', legendPercent
+            ? `${num(segment.value)} · ${pct(segment.value, total)}%`
+            : num(segment.value)),
+        ]);
+        if (total) attachTooltip(row, tooltipFor(segment));
+        return row;
+      })),
     ]),
     note && el('.bar-sub', note),
   ]);

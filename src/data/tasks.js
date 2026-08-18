@@ -276,6 +276,36 @@ export function dueSeverityDetail(due, now = new Date()) {
   return `deadline is ${weeks} weken verstreken`;
 }
 
+/* --------------------------------------------------------------- Sorting */
+
+/**
+ * The sort a freshly imported board opens on.
+ *
+ * Due date, newest first — but only if the column is actually filled in. A
+ * board where most tasks have no deadline would sort almost entirely on the
+ * "no value sinks to the bottom" rule, which is not an order at all, so it
+ * falls back to Created (also newest first) and finally to the deadline flag.
+ *
+ * @param {Task[]} tasks
+ * @param {ReturnType<typeof buildColumns>} columns
+ */
+export function defaultTaskSort(tasks, columns) {
+  const filled = (column) =>
+    (column ? tasks.filter((task) => task.parsed[column.key] != null).length : 0);
+
+  const due = columnByRole(columns, 'dueDate');
+  // Half of them, so one stray deadline on a board of eighty does not decide
+  // the ordering for the other seventy-nine.
+  if (tasks.length && filled(due) * 2 >= tasks.length) {
+    return { key: due.key, dir: 'desc' };
+  }
+
+  const created = columnByRole(columns, 'created');
+  if (filled(created)) return { key: created.key, dir: 'desc' };
+
+  return { key: 'severity', dir: 'desc' };
+}
+
 /* -------------------------------------------------------------------- Rows */
 
 /**

@@ -33,6 +33,22 @@
   --viz-neutral:      #dfe3ea;   /* remainder / "geen" */
   --viz-gap:          #ffffff;   /* 2px spacer between fills */
 
+  /* Categorical series, in fixed slot order — assigned by slot, never cycled,
+     and never generated. Validated on #ffffff via dataviz/validate_palette.js:
+     lightness band, chroma floor, adjacent CVD ΔE 9.1 (protan) and normal-vision
+     ΔE 19.6 all pass. Three slots sit under 3:1 against white, which is why every
+     slice is also named and counted in the legend beside it — the contrast WARN
+     is paid off with visible labels, not ignored.
+     Six slots plus "Overig": past ~7 classes adjacent hues stop being tellable,
+     so the tail folds rather than growing an eighth colour. */
+  --series-1:         #2a78d6;   /* blue    */
+  --series-2:         #eb6834;   /* orange  */
+  --series-3:         #1baf7a;   /* aqua    */
+  --series-4:         #eda100;   /* yellow  */
+  --series-5:         #e87ba4;   /* magenta */
+  --series-6:         #008300;   /* green   */
+  --series-other:     #98a0b0;   /* the folded tail — deliberately not a hue */
+
   /* Status washes (badges, pills) --------------------------------- */
   --wash-pass-bg:     #e8f7e8;  --wash-pass-bd:  #b7e5b7;  --wash-pass-fg:  #0a7d0a;
   --wash-warn-bg:     #fff4e0;  --wash-warn-bd:  #f7d9a1;  --wash-warn-fg:  #a76a06;
