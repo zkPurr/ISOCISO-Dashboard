@@ -1,0 +1,6 @@
+services:
+  dashboard:
+    build: .
+    image: dubple/isociso-dashboard:latest
+    ports:
+      - "8080:80"
