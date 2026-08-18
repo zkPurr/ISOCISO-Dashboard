@@ -1,6 +1,7 @@
 import { DOMAIN_ORDER, DOMAIN_UNKNOWN, MATURITY_PASS_THRESHOLD, refKey } from './schema.js';
 import { parseQuery, matchesQuery } from './query.js';
 import { compareControlId } from '../core/format.js';
+import { dueSeverity } from './tasks.js';
 
 export const isPassed = (control) =>
   control.maturity != null && control.maturity >= MATURITY_PASS_THRESHOLD;
@@ -92,6 +93,14 @@ export function applySort(controls, { key, dir }) {
 
   return [...controls].sort((a, b) => {
     if (key === 'id') return compareControlId(a.id, b.id) * factor;
+    if (key === 'severity') {
+      // Unflagged rows sink in both directions — sorting on this column is
+      // always about finding the rows that need action.
+      if (a.severity == null && b.severity == null) return compareControlId(a.id, b.id);
+      if (a.severity == null) return 1;
+      if (b.severity == null) return -1;
+      return (a.severity - b.severity) * factor || compareControlId(a.id, b.id);
+    }
     if (key === 'maturity') {
       // Unscored rows always sink to the bottom, in both directions.
       if (a.maturity == null && b.maturity == null) return compareControlId(a.id, b.id);
@@ -201,4 +210,78 @@ export function selectView(state) {
   const filtered = applyFilters(state.controls, state.filters);
   const sorted = applySort(filtered, state.sort);
   return paginate(sorted, state.page, state.pageSize);
+}
+
+/* ------------------------------------------------------------------
+   Taken. The same filter -> sort -> paginate pipeline as the controls,
+   but over a column set that is only known at import time.
+   ------------------------------------------------------------------ */
+
+export const tasksForProject = (tasks, project) =>
+  tasks.filter((task) => task.project === project);
+
+/**
+ * Free-text search over every imported cell — including the columns that are
+ * currently hidden. Searching only the visible columns would make the result
+ * depend on the picker, which is not what a search box is for.
+ */
+export function filterTasks(tasks, query) {
+  const needle = String(query ?? '').trim().toLowerCase();
+  if (!needle) return tasks;
+
+  return tasks.filter((task) =>
+    Object.values(task.cells).some((value) => value.toLowerCase().includes(needle)));
+}
+
+/** Sorts by the flag column, or by any imported column, according to its type. */
+export function sortTasks(tasks, { key, dir }, columns, now = new Date()) {
+  const factor = dir === 'desc' ? -1 : 1;
+  const column = columns.find((c) => c.key === key);
+
+  // Ties fall back to the due date, then the issue key — so two rows with the
+  // same status keep a stable, meaningful order instead of the CSV's.
+  const tiebreak = (a, b) =>
+    (a.due ?? Infinity) - (b.due ?? Infinity)
+    || COLLATOR.compare(a.issueKey, b.issueKey);
+
+  return [...tasks].sort((a, b) => {
+    if (key === 'severity') {
+      const diff = dueSeverity(a.due, now) - dueSeverity(b.due, now);
+      return diff * factor || tiebreak(a, b);
+    }
+    if (!column) return tiebreak(a, b);
+
+    if (column.type === 'date' || column.type === 'priority') {
+      const left = a.parsed[key];
+      const right = b.parsed[key];
+      // Rows without a value sink in both directions, like an unscored control.
+      if (left == null && right == null) return tiebreak(a, b);
+      if (left == null) return 1;
+      if (right == null) return -1;
+      return (left - right) * factor || tiebreak(a, b);
+    }
+
+    const cmp = COLLATOR.compare(a.cells[key] ?? '', b.cells[key] ?? '');
+    return cmp * factor || tiebreak(a, b);
+  });
+}
+
+/** The visible slice of one board, filtered + sorted + paged. */
+export function selectTaskView(state, project) {
+  const mine = tasksForProject(state.tasks, project);
+  const filtered = filterTasks(mine, state.taskQuery);
+  const sorted = sortTasks(filtered, state.taskSort, state.taskColumns);
+  return {
+    ...paginate(sorted, state.taskPage, state.pageSize),
+    // `rows` is the current page; `all` is everything the filters left over —
+    // a count over the whole selection must not change when you turn a page.
+    all: sorted,
+    projectTotal: mine.length,
+  };
+}
+
+/** The columns the picker has enabled, in canonical display order. */
+export function visibleColumns(columns, visible) {
+  const shown = new Set(visible);
+  return columns.filter((column) => shown.has(column.key));
 }

@@ -22,7 +22,21 @@ function pageNumbers(page, pageCount) {
   return out;
 }
 
-export function tableFooter({ from, to, total, page, pageCount }) {
+/**
+ * @param {object} view          A paginate() result
+ * @param {object} [opts]
+ * @param {string} [opts.noun]   What is being counted, for the footer sentence
+ * @param {(page: number) => void} [opts.onPage]      Defaults to the controls table
+ * @param {(size: number) => void} [opts.onPageSize]
+ */
+export function tableFooter(
+  { from, to, total, page, pageCount },
+  {
+    noun = 'controls',
+    onPage = (next) => setState({ page: next }),
+    onPageSize = (size) => setState({ pageSize: size, page: 1 }),
+  } = {},
+) {
   const buttons = pageNumbers(page, pageCount).map((entry) =>
     entry === '…'
       ? el('span.gap', '…')
@@ -31,35 +45,37 @@ export function tableFooter({ from, to, total, page, pageCount }) {
         className: entry === page ? 'is-active' : '',
         'aria-current': entry === page ? 'page' : null,
         'aria-label': `Pagina ${entry}`,
-        onclick: () => setState({ page: entry }),
+        onclick: () => onPage(entry),
       }, String(entry)));
 
   return el('.table-foot', [
     el('.table-foot-info', total
-      ? `Weergave ${num(from)} t/m ${num(to)} van ${num(total)} controls`
-      : 'Geen controls om weer te geven'),
+      ? `Weergave ${num(from)} t/m ${num(to)} van ${num(total)} ${noun}`
+      : `Geen ${noun} om weer te geven`),
 
     el('.pager', [
       el('button', {
         type: 'button',
         disabled: page <= 1,
         'aria-label': 'Vorige pagina',
-        onclick: () => setState({ page: page - 1 }),
+        onclick: () => onPage(page - 1),
       }, icon('chevronLeft', { size: 16 })),
       ...buttons,
       el('button', {
         type: 'button',
         disabled: page >= pageCount,
         'aria-label': 'Volgende pagina',
-        onclick: () => setState({ page: page + 1 }),
+        onclick: () => onPage(page + 1),
       }, icon('chevronRight', { size: 16 })),
     ]),
 
     el('select.select', {
       style: { width: 'auto' },
       'aria-label': 'Aantal rijen per pagina',
+      id: 'page-size',
+      name: 'page-size',
       dataset: { focusId: 'page-size' },
-      onchange: (e) => setState({ pageSize: Number(e.target.value), page: 1 }),
+      onchange: (e) => onPageSize(Number(e.target.value)),
     }, PAGE_SIZES.map((size) =>
       el('option', { value: size, selected: size === state.pageSize }, `${size} / pagina`))),
   ]);

@@ -40,6 +40,8 @@ export function filterBar(controls) {
         placeholder: 'Zoek Control ID of beschrijving...',
         'aria-label': 'Zoek in de tabel',
         title: SEARCH_HELP,
+        id: 'table-search',
+        name: 'table-search',
         dataset: { focusId: 'table-search' },
         oninput: (e) => setFilter({ query: e.target.value }),
       }),

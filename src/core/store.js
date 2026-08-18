@@ -34,6 +34,34 @@ export const state = {
   page: 1,
   pageSize: 10,
 
+  /* ---------------------------------------------------------------------
+     Taken. A separate dataset with its own import, so none of it touches
+     the controls above — importing a Jira export leaves the ISMS sheet
+     alone, and the other way round.
+     --------------------------------------------------------------------- */
+
+  /** @type {import('../data/tasks.js').Task[]} */
+  tasks: [],
+
+  /** Column definitions as discovered in the imported CSV, in display order. */
+  taskColumns: [],
+
+  /** Keys of the columns the picker currently shows. */
+  taskVisible: [],
+
+  /** Metadata about the last Jira import. */
+  taskSource: null,
+
+  /** Search box while on a Taken page — separate from the control filters. */
+  taskQuery: '',
+
+  // Flagged rows on top by default: the point of the page is what needs action.
+  taskSort: { key: 'severity', dir: 'desc' },
+  taskPage: 1,
+
+  /** Column picker open state. Deliberately not persisted. */
+  taskColumnsOpen: false,
+
   ui: { sidebarCollapsed: false },
 };
 

@@ -38,12 +38,26 @@ Herkende kolommen (hoofdletters, spaties en underscores maken niet uit):
 | `Domain` | nee | `Organizational` / `People` / `Physical` / `Technological` worden vertaald naar Organisatorisch / Mensgericht / Fysiek / Technologisch |
 | `Owner` | nee | |
 | `Kwaliteitsmaturiteit_27002` | nee | 1–5; leeg = "nog niet beoordeeld" |
+| `Severity_Flag` | nee | leeg = geen vlag; `1` geel, `2` oranje, `3` rood |
 | `Evidence`, `Beleid`, `Risico's` | nee | id's naar de gelijknamige werkbladen; meerdere per cel mag (`1, 4, 7`) |
 
 Ontbrekende kolommen zijn **geen fout**: die velden blijven leeg en de app
 toont "Geen evidence gekoppeld", "Geen beleid gekoppeld" en "Geen risico's
 gekoppeld". Rijen zonder `Control_ID` worden overgeslagen; dubbele
 `Control_ID`'s worden overschreven door de laatste rij.
+
+### Actie Nodig — de Severity_Flag
+
+`Severity_Flag` vult de eerste kolom **Actie Nodig** van de controltabel. Is de
+cel leeg, dan blijft die kolom leeg; staat er `1`, `2` of `3`, dan verschijnt er
+een vlag en kleurt de hele rij mee — geel, oranje, rood. De kolom staat vooraan
+en houdt altijd dezelfde breedte, dus een rij met vlag loopt precies gelijk met
+een rij zonder. Klik op de kolomkop om de gevlagde rijen bovenaan te zetten;
+rijen zonder vlag zakken in beide sorteerrichtingen naar onderen.
+
+Een waarde buiten 1–3 telt als "geen vlag" in plaats van dat hij wordt
+afgerond — een 7 in de sheet is een fout in de data, en die hoort zichtbaar te
+blijven.
 
 ### De gekoppelde werkbladen
 
@@ -77,6 +91,62 @@ niets mee berekend.
 Data blijft in `localStorage` van de browser — er gaat niets naar een server.
 Met **Data wissen** in het importvenster gooi je alles weg.
 
+## Taken importeren (Jira CSV)
+
+Onder de kop **Taken** in het menu staan twee pagina's: **SECU** en
+**ISMSKACT**. Sta je op zo'n pagina, dan importeert de knop **Importeren**
+rechtsboven een Jira CSV-export in plaats van de ISMS-sheet — de knop importeert
+altijd waar je naar kijkt. Beide datasets staan los van elkaar: een Jira-import
+raakt de controls niet aan, en "Data wissen" in het Excel-venster laat de taken
+staan (en omgekeerd).
+
+De export wordt gesplitst op de kolom `Project key`; ontbreekt die, dan wordt het
+bord uit de issue key afgeleid (`SECU-42` → `SECU`). Taken van een ander bord
+worden wél ingelezen, maar hebben nergens een pagina — het importrapport en de
+bronregel onder de tabel zeggen om hoeveel het gaat, zodat de aantallen kloppen.
+
+**Alle** kolommen uit de export worden ingelezen. Welke je ziet, bepaal je met
+**Kolommen** boven de tabel. Standaard staan aan:
+
+| Kolom | Weergave |
+|---|---|
+| `Summary` | tekst, afgekapt op één regel |
+| `Issue key` | tekst |
+| `Priority` | `1` hoog, `2` middel, `3` standaard — leeg telt als 3 |
+| `Status Category` | badge (`To Do`, `In Progress`, `Done`) |
+| `Created` | datum |
+| `Status Category Changed` | datum |
+| `Due date` | datum |
+| `Assignee` | tekst |
+
+`Project key` staat er bewust niet bij: op een bordpagina heeft elke rij
+dezelfde waarde. Herhaalt Jira een kolomnaam (`Labels`, `Comment` — dat doet
+het voor velden met meerdere waarden), dan worden die tot één kolom
+samengevoegd waarin de ingevulde waarden achter elkaar staan.
+
+Datums worden gelezen in Jira's eigen notatie (`10/Aug/26 5:00 AM`, met of
+zonder tijd, AM/PM of 24-uurs) en anders als ISO-datum — een export die door
+Excel is gegaan komt zo vaak terug. De originele celtekst blijft in de tooltip
+staan.
+
+### Actie Nodig — de deadlinevlag
+
+Ook de takentabel begint met de kolom **Actie Nodig**, op dezelfde 1-2-3 schaal
+als de controls. De vlag komt uit `Due date`, geteld in hele weken:
+
+| Situatie | Vlag |
+|---|---|
+| deadline valt in een latere week | geen vlag |
+| deadline valt deze week | 1 — geel |
+| deadline is een week verstreken | 2 — oranje |
+| deadline is langer verstreken | 3 — rood |
+
+Weken en geen dagen, omdat een deadline op maandag en één op vrijdag in dezelfde
+week hetzelfde werk zijn — die horen niet verschillend te kleuren omdat de
+kalender toevallig omslaat. Taken zonder `Due date` krijgen nooit een vlag.
+
+De tabel sorteert standaard op deze kolom, hoogste vlag eerst.
+
 ## Zoeken
 
 De zoekbalk zoekt standaard op **een deel van** de tekst. Dat is handig tijdens
@@ -99,6 +169,12 @@ Klik je vanaf **Evidence**, **Beleid** of **Risico's** op een control-chip in de
 kolom "Gekoppelde controls", dan springt de app naar Beheersmaatregelen met
 precies zo'n exacte zoekopdracht.
 
+Die syntax geldt voor de controls. Op een registerpagina zoekt de balk in dat
+register, en op een takenpagina in dat bord — daar is het altijd een gewone
+substring-zoekopdracht, over **alle** geïmporteerde kolommen, ook de kolommen
+die je hebt verborgen. Wat je zoekt hangt zo niet af van wat je toevallig hebt
+aanstaan.
+
 ## Waar zit wat
 
 ```
@@ -118,16 +194,21 @@ src/
     url.js          celtekst → veilige link, of tekst met uitleg
   data/
     schema.js       ← kolom- én werkbladdefinities: HET uitbreidpunt
-    importer.js     Excel/CSV → controls + registers (SheetJS, lazy geladen)
+    importer.js     Excel/CSV → controls + registers
+    xlsx.js         SheetJS, lazy geladen — gedeeld door beide importers
+    tasks.js        ← Jira-kolommen, datums, prioriteit, deadlinevlag
+    taskImporter.js Jira CSV → taken (alle kolommen)
     selectors.js    filteren, sorteren, pagineren, KPI's, koppelingen
     query.js        zoeksyntax: substring, "exact" en Kolom:"exact"
     persist.js      localStorage
     demo.js         93 ISO 27002:2022 controls + demoregisters
   charts/           donut, gestapelde balken, tooltip
   ui/               sidebar, topbar, statcards, filters, tabel, paginering,
-                    modal, detailPane (bottom sheet), links
+                    modal, detailPane (bottom sheet), links,
+                    severity (de gedeelde 1-2-3 vlag), taskTable,
+                    columnPicker, taskImportModal
   views/            dashboard, beheersmaatregelen, library (de drie registers),
-                    placeholder, lege staat
+                    tasks (per Jira-bord), placeholder, lege staat
 ```
 
 ## Uitbreiden
@@ -143,8 +224,19 @@ de koppelingen en het importrapport pakken hem op; voor een eigen pagina komt er
 een kolomdefinitie bij in `COLUMNS` in `src/views/library.js`.
 
 **Nieuwe pagina toevoegen** — zet een entry in `NAV` in `src/ui/sidebar.js` en
-koppel een viewfunctie in `ROUTES` in `src/main.js`. Met `enabled: false` blijft
-het menu-item zichtbaar maar niet klikbaar (zo staat Rapportages er nu in).
+koppel een viewfunctie in `ROUTES` in `src/main.js`. Een entry met `header` en
+`items` wordt een groep met een kop erboven (zo staan GRC en Taken erin); een
+losse entry staat op zichzelf. Met `enabled: false` blijft het menu-item
+zichtbaar maar niet klikbaar (zo staat Rapportages er nu in).
+
+**Nieuw Jira-bord toevoegen** — één entry in `TASK_PROJECTS` in
+`src/data/tasks.js` (project key, label, route). Het menu-item, de route en de
+splitsing bij het importeren volgen daaruit.
+
+**Jira-kolom een eigen weergave geven** — één entry in `TASK_FIELDS` in
+`src/data/tasks.js`. Zonder entry wordt een kolom gewoon als tekst ingelezen en
+getoond, dus dit is alleen nodig voor een datum, een badge of een plek in de
+standaardkolommen (`DEFAULT_ROLES`).
 
 **Nieuwe filter toevoegen** — één veld in `state.filters` (`src/core/store.js`),
 één regel in `applyFilters` (`src/data/selectors.js`), één `select()` in
@@ -156,8 +248,10 @@ opnieuw.
 
 ## Werkende pagina's
 
-**Dashboard**, **Beheersmaatregelen**, **Evidence**, **Beleid** en **Risico's**
-zijn actief. Rapportages staat in het menu maar is nog uitgeschakeld.
+Onder **GRC** zijn **Beheersmaatregelen**, **Evidence**, **Beleid** en
+**Risico's** actief, onder **Taken** de borden **SECU** en **ISMSKACT**, plus
+het **Dashboard** erboven. Rapportages staat in het menu maar is nog
+uitgeschakeld.
 
 In de controltabel:
 

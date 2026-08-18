@@ -1,22 +1,6 @@
 import { matchHeaders, buildControl, buildRecord, refKey, LOOKUP_SHEETS } from './schema.js';
 import { toLink, bestLink } from '../core/url.js';
-
-/** SheetJS is loaded on demand — the dashboard boots without it. */
-const XLSX_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs';
-let xlsxPromise = null;
-
-function loadXlsx() {
-  if (!xlsxPromise) {
-    xlsxPromise = import(/* @vite-ignore */ XLSX_URL).catch((err) => {
-      xlsxPromise = null;
-      throw new Error(
-        'Kon de Excel-bibliotheek niet laden. Controleer je internetverbinding en probeer opnieuw.',
-        { cause: err },
-      );
-    });
-  }
-  return xlsxPromise;
-}
+import { loadXlsx } from './xlsx.js';
 
 /**
  * The header row is not always row 1 in practice (title rows, logos, blank

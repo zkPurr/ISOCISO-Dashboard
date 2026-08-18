@@ -16,6 +16,7 @@
  * @property {string}      domain     Normalised Dutch domain label
  * @property {string}      owner
  * @property {number|null} maturity   1..5, or null when not scored yet
+ * @property {number|null} severity   Severity_Flag 1..3, or null for no flag
  * @property {string[]}    evidence   Ids into the Evidence sheet, as written
  * @property {string[]}    policies   Ids into the Beleid sheet
  * @property {string[]}    risks      Ids into the Risk sheet
@@ -62,7 +63,7 @@ export const EMPTY_LABELS = {
 /** Anchor text for a policy row whose Description cell is empty. */
 export const POLICY_FALLBACK_LABEL = 'Ga naar beleid';
 
-const normaliseHeader = (value) =>
+export const normaliseHeader = (value) =>
   String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /**
@@ -121,6 +122,26 @@ export const FIELDS = [
       if (!match) return null;
       const score = Math.round(parseFloat(match[0]));
       return score >= 1 && score <= 5 ? score : null;
+    },
+  },
+  {
+    key: 'severity',
+    label: 'Severity_Flag',
+    required: false,
+    aliases: [
+      'severityflag', 'severity', 'ernst', 'flag', 'vlag', 'actienodig',
+      'actievereist', 'prioriteitsvlag', 'severityscore',
+    ],
+    // 1 / 2 / 3 raise a flag on the row; anything else — empty, 0, text — does
+    // not. An out-of-range number is treated as "no flag" rather than clamped:
+    // a 7 in the sheet is a data error, and inventing a severity for it would
+    // hide that.
+    parse: (v) => {
+      if (v == null || v === '') return null;
+      const match = String(v).match(/-?\d+/);
+      if (!match) return null;
+      const level = parseInt(match[0], 10);
+      return level >= 1 && level <= 3 ? level : null;
     },
   },
 

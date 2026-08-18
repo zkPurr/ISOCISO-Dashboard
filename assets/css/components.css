@@ -244,6 +244,30 @@ td.col-domain, td.col-owner { white-space: nowrap; }
 .sort-caret { color: var(--text-muted); }
 .sort-caret.is-active { color: var(--brand); }
 
+/* ---------------------------------------------------------------- Severity
+   A flagged row is tinted whole, and carries the flag in its own leading
+   column — so the flag never shifts the columns next to it, and an unflagged
+   row keeps exactly the layout it had before the column existed. */
+table.data tbody tr.sev-1 td { background: var(--wash-sev1-bg); }
+table.data tbody tr.sev-2 td { background: var(--wash-sev2-bg); }
+table.data tbody tr.sev-3 td { background: var(--wash-sev3-bg); }
+table.data tbody tr.sev-1:hover td { background: var(--wash-sev1-hv); }
+table.data tbody tr.sev-2:hover td { background: var(--wash-sev2-hv); }
+table.data tbody tr.sev-3:hover td { background: var(--wash-sev3-hv); }
+
+/* Fixed width: the column takes the same room whether or not it holds a flag. */
+table.data th.col-flag,
+table.data td.col-flag {
+  width: 78px;
+  min-width: 78px;
+  text-align: center;
+  padding-inline: var(--sp-2);
+}
+.sev-flag { display: inline-flex; align-items: center; justify-content: center; cursor: help; }
+.sev-flag.is-1 { color: var(--wash-sev1-fg); }
+.sev-flag.is-2 { color: var(--wash-sev2-fg); }
+.sev-flag.is-3 { color: var(--wash-sev3-fg); }
+
 td.col-ref { white-space: nowrap; vertical-align: top; }
 
 /* Cell links to the Evidence / Beleid / Risk registers */
@@ -361,6 +385,69 @@ button.link-cell:focus-visible { outline: 2px solid var(--brand); outline-offset
 button.chip:hover { background: var(--brand-soft); border-color: var(--brand-soft); color: var(--brand-ink); }
 .chip.is-quiet { color: var(--text-muted); font-weight: 450; cursor: default; }
 
+/* ---------------------------------------------------------------- Popover
+   Anchored to its trigger rather than centred: the column picker is a change
+   to the table right behind it, so it should not cover the whole screen. */
+.popover-host { position: relative; }
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: 268px;
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-3);
+}
+.popover-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  color: var(--text-secondary);
+}
+.popover-actions { display: flex; gap: var(--sp-2); }
+.popover-list { display: flex; flex-direction: column; gap: 1px; }
+.checkrow {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-md);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.checkrow:hover { background: var(--surface-hover); }
+.checkrow input { accent-color: var(--brand); flex: none; }
+.checkrow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.checkrow.is-locked { color: var(--text-muted); cursor: not-allowed; }
+
+/* ---------------------------------------------------------------- Task table */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  flex-wrap: wrap;
+}
+.toolbar .search { flex: 1; min-width: 200px; }
+.toolbar-spacer { flex: 1; }
+td.col-text { max-width: 420px; }
+td.col-text .cell-clip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+td.col-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
+
 /* ---------------------------------------------------------------- Badges */
 .badge {
   display: inline-flex;
@@ -378,6 +465,10 @@ button.chip:hover { background: var(--brand-soft); border-color: var(--brand-sof
 .badge-warn { background: var(--wash-warn-bg); border-color: var(--wash-warn-bd); color: var(--wash-warn-fg); }
 .badge-fail { background: var(--wash-fail-bg); border-color: var(--wash-fail-bd); color: var(--wash-fail-fg); }
 .badge-none { background: var(--wash-none-bg); border-color: var(--wash-none-bd); color: var(--wash-none-fg); }
+.badge-info { background: var(--wash-info-bg); border-color: var(--wash-info-bd); color: var(--wash-info-fg); }
+.badge-sev1 { background: var(--wash-sev1-bg); border-color: #f5dfa8; color: var(--wash-sev1-fg); }
+.badge-sev2 { background: var(--wash-sev2-bg); border-color: #f2c9a6; color: var(--wash-sev2-fg); }
+.badge-sev3 { background: var(--wash-sev3-bg); border-color: var(--wash-fail-bd); color: var(--wash-sev3-fg); }
 
 /* ---------------------------------------------------------------- Table foot */
 .table-foot {

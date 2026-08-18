@@ -2,12 +2,15 @@ import { mount, captureFocus, restoreFocus } from './core/dom.js';
 import { state, setState, subscribe } from './core/store.js';
 import { defineRoutes, startRouter, resolve, currentRoute, navigate } from './core/router.js';
 import { save, load } from './data/persist.js';
-import { renderSidebar, NAV } from './ui/sidebar.js';
+import { renderSidebar, NAV_ITEMS } from './ui/sidebar.js';
 import { renderTopbar } from './ui/topbar.js';
 import { closeDetailPane } from './ui/detailPane.js';
+import { closeColumnPicker } from './ui/columnPicker.js';
+import { TASK_PROJECTS } from './data/tasks.js';
 import { dashboardView } from './views/dashboard.js';
 import { controlsView } from './views/controls.js';
 import { evidenceView, beleidView, risicosView } from './views/library.js';
+import { tasksView } from './views/tasks.js';
 import { placeholderView } from './views/placeholder.js';
 
 const app = document.getElementById('app');
@@ -22,10 +25,12 @@ const ROUTES = {
   evidence: evidenceView,
   beleid: beleidView,
   risicos: risicosView,
+  // One route per Jira board, built from the same view.
+  ...Object.fromEntries(TASK_PROJECTS.map((project) => [project.route, tasksView(project)])),
 };
 
 function viewFor(route) {
-  const nav = NAV.find((n) => n.route === route);
+  const nav = NAV_ITEMS.find((n) => n.route === route);
   if (nav && !nav.enabled) return () => placeholderView(nav.label);
   return ROUTES[route] || null;
 }
@@ -48,6 +53,7 @@ function render() {
   // (browser back included) closes it rather than stranding it over a new view.
   if (route !== renderedRoute) {
     closeDetailPane();
+    closeColumnPicker();
     renderedRoute = route;
   }
 
@@ -73,6 +79,10 @@ function persist() {
     controls: state.controls,
     library: state.library,
     source: state.source,
+    tasks: state.tasks,
+    taskColumns: state.taskColumns,
+    taskVisible: state.taskVisible,
+    taskSource: state.taskSource,
     ui: state.ui,
     pageSize: state.pageSize,
   });
@@ -84,6 +94,10 @@ function boot() {
     state.controls = saved.controls;
     state.library = saved.library;
     state.source = saved.source ?? null;
+    state.tasks = saved.tasks;
+    state.taskColumns = saved.taskColumns;
+    state.taskVisible = saved.taskVisible;
+    state.taskSource = saved.taskSource;
     if (saved.ui) Object.assign(state.ui, saved.ui);
     if (saved.pageSize) state.pageSize = saved.pageSize;
   }
@@ -98,7 +112,15 @@ window.addEventListener('storage', () => {
   const saved = load();
   if (saved) {
     closeDetailPane();
-    setState({ controls: saved.controls, library: saved.library, source: saved.source ?? null });
+    setState({
+      controls: saved.controls,
+      library: saved.library,
+      source: saved.source ?? null,
+      tasks: saved.tasks,
+      taskColumns: saved.taskColumns,
+      taskVisible: saved.taskVisible,
+      taskSource: saved.taskSource,
+    });
   }
 });
 

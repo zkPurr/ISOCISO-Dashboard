@@ -121,6 +121,8 @@ function searchBar(definition, shown, total) {
         value: state.libraryQuery,
         placeholder: `Zoek in ${definition.label.toLowerCase()}...`,
         'aria-label': `Zoek in ${definition.label}`,
+        id: 'library-search',
+        name: 'library-search',
         dataset: { focusId: 'library-search' },
         oninput: (e) => setState({ libraryQuery: e.target.value }),
       }),

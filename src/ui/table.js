@@ -6,6 +6,7 @@ import { EMPTY_LABELS, MATURITY_PASS_THRESHOLD, POLICY_FALLBACK_LABEL } from '..
 import { resolveRefs } from '../data/selectors.js';
 import { openDetailPane } from './detailPane.js';
 import { recordLink } from './links.js';
+import { SEVERITY_HEADER, severityCell, severityRowClass } from './severity.js';
 
 /**
  * Maturity as a badge. The colour is a status role, and it is always paired
@@ -76,6 +77,9 @@ function policyCell(control) {
 }
 
 const COLUMNS = [
+  // The flag lives in its own leading column rather than inside the id cell,
+  // so a flagged row lines up with an unflagged one instead of shifting.
+  { key: 'severity',  label: SEVERITY_HEADER,                sortable: true, flag: true },
   { key: 'id',        label: 'Control ID',                   sortable: true },
   { key: 'title',     label: 'Beschrijving',                 sortable: true },
   { key: 'domain',    label: 'Domein',                       sortable: true },
@@ -99,7 +103,11 @@ function headerCell(column) {
   if (caret) caret.setAttribute('class', `sort-caret${isSorted ? ' is-active' : ''}`);
 
   return el('th', {
-    className: `${column.sortable ? 'sortable ' : ''}${column.center ? 'is-center' : ''}`.trim(),
+    className: [
+      column.sortable && 'sortable',
+      column.center && 'is-center',
+      column.flag && 'col-flag',
+    ].filter(Boolean).join(' '),
     scope: 'col',
     'aria-sort': isSorted ? (state.sort.dir === 'asc' ? 'ascending' : 'descending') : null,
     onclick: column.sortable ? () => toggleSort(column.key) : null,
@@ -115,7 +123,10 @@ export function controlsTable(rows) {
     ]);
   }
 
-  const body = rows.map((control) => el('tr', [
+  const body = rows.map((control) => el('tr', {
+    className: severityRowClass(control.severity),
+  }, [
+    severityCell(control.severity, `Severity_Flag ${control.severity} uit de bronsheet`),
     el('td.col-id', control.id),
     el('td.col-title', control.title || el('span.muted', 'Geen beschrijving')),
     el('td.col-domain', control.domain || el('span.muted', 'Onbekend')),

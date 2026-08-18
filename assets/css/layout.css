@@ -50,6 +50,26 @@
 .brand-sub  { font-size: var(--fs-sm); color: var(--text-muted); }
 
 .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--sp-3); }
+
+/* Section heading above a group of nav items (GRC, Taken). */
+.nav-group-label {
+  padding: var(--sp-4) var(--sp-3) var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+/* Collapsed, a text heading has nowhere to go — a hairline keeps the grouping
+   visible without a label that would have to be truncated to nothing. */
+.app.is-collapsed .nav-group-label {
+  padding: 0;
+  margin: var(--sp-3) var(--sp-3);
+  height: 1px;
+  overflow: hidden;
+  color: transparent;
+  background: var(--border);
+}
 .nav-item {
   display: flex;
   align-items: center;

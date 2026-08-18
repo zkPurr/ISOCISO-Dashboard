@@ -134,6 +134,12 @@ function hash(str) {
 /** Weighted so the mix looks like a real, partly-mature programme. */
 const SCORE_CURVE = [1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, null];
 
+/** Most rows carry no Severity_Flag at all — a flag has to stay exceptional. */
+const SEVERITY_CURVE = [
+  null, null, null, null, null, null, null, null, null, null,
+  null, null, null, null, null, null, 1, 1, 2, 3,
+];
+
 /* ------------------------------------------------------------------
    The three registers the controls sheet points at. [id, description,
    link] — with two deliberately awkward links, because a real register
@@ -244,6 +250,7 @@ export function buildDemoControls() {
     const control = buildControl(row, map);
     control.owner = owners[seed % owners.length];
     control.maturity = SCORE_CURVE[seed % SCORE_CURVE.length];
+    control.severity = SEVERITY_CURVE[(seed >> 9) % SEVERITY_CURVE.length];
     control.evidence = pickRefs(seed, EVIDENCE_ROWS, EVIDENCE_COUNTS);
     control.policies = pickRefs(seed >> 3, POLICY_ROWS, POLICY_COUNTS);
     control.risks = pickRefs(seed >> 6, RISK_ROWS, RISK_COUNTS);
@@ -270,7 +277,7 @@ export function demoSource() {
     rowCount: ROWS.length,
     skippedRows: 0,
     headerRowIndex: 1,
-    mapped: ['rawId', 'title', 'domain', 'owner', 'maturity', 'evidence', 'policies', 'risks'],
+    mapped: ['rawId', 'title', 'domain', 'owner', 'maturity', 'severity', 'evidence', 'policies', 'risks'],
     unmatched: [],
     libraries: {
       evidence: sheet('evidence', 'Evidence'),

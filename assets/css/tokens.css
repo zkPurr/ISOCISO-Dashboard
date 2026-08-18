@@ -38,6 +38,15 @@
   --wash-warn-bg:     #fff4e0;  --wash-warn-bd:  #f7d9a1;  --wash-warn-fg:  #a76a06;
   --wash-fail-bg:     #fdecec;  --wash-fail-bd:  #f4bcbc;  --wash-fail-fg:  #b12f2f;
   --wash-none-bg:     #f1f3f7;  --wash-none-bd:  #dfe3ea;  --wash-none-fg:  #6b7385;
+  --wash-info-bg:     #eaf1fe;  --wash-info-bd:  #c5d9fb;  --wash-info-fg:  #1b4fc4;
+
+  /* Severity 1-2-3. One scale, used by both the Severity_Flag on a control and
+     the due-date flag on a task, so "kritiek" looks the same wherever it shows.
+     The -hover tints stay a step darker than the row tint, so hovering a
+     flagged row still reads as a hover and not as a different severity. */
+  --wash-sev1-bg:     #fff7e2;  --wash-sev1-hv:  #fdefc9;  --wash-sev1-fg:  #a76a06;
+  --wash-sev2-bg:     #fdead9;  --wash-sev2-hv:  #f9dcc3;  --wash-sev2-fg:  #b0510c;
+  --wash-sev3-bg:     #fdeaea;  --wash-sev3-hv:  #f9d8d8;  --wash-sev3-fg:  #b12f2f;
 
   /* Geometry ------------------------------------------------------ */
   --r-sm: 6px;

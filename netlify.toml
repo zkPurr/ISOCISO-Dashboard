@@ -11,12 +11,25 @@
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# The app ships unhashed ES modules that import each other by path. Caching
+# them for an hour means a deploy can leave a browser holding a stale module
+# next to a fresh one — and a stale module is not a slightly old app, it is a
+# broken one: the import still resolves, then throws on the changed interface
+# and the whole render dies. So everything revalidates. ETags make that a 304
+# in the normal case, so it costs a round trip, not a download.
+#
+# Switch to long max-age only for filenames that carry a content hash.
 [[headers]]
   for = "/assets/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "no-cache"
 
 [[headers]]
   for = "/src/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
