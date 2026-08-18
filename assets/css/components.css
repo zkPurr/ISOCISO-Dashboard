@@ -200,6 +200,9 @@
    donut sitting high instead of centered in the taller column next to it.
    Growing the row to fill lets `align-items: center` (below) center it. */
 .viz-grid-3 .donut-row { flex: 1; }
+/* Two lines' worth, so a folded "Overig" note in one column doesn't shrink
+   its neighbours' donut-row and throw off the centering above. */
+.viz-grid-3 .bar-sub { min-height: calc(1.5em * 2); }
 
 .viz-grid-3 > * + * {
   border-left: 1px solid var(--border);
