@@ -195,6 +195,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--sp-5);
 }
+/* Grid stretches each .viz to the tallest column, but the donut+legend row
+   inside only takes its own content height — so a short legend leaves the
+   donut sitting high instead of centered in the taller column next to it.
+   Growing the row to fill lets `align-items: center` (below) center it. */
+.viz-grid-3 .donut-row { flex: 1; }
+
 .viz-grid-3 > * + * {
   border-left: 1px solid var(--border);
   padding-left: var(--sp-5);
