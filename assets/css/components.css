@@ -733,3 +733,96 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
 .toast.is-error { border-left-color: var(--viz-fail); }
 .toast.is-success { border-left-color: var(--viz-pass); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---------------------------------------------------------------- Maturiteit */
+.mat-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4);
+  margin-bottom: var(--sp-4); font-size: var(--fs-sm); flex-wrap: wrap;
+}
+.mat-kpis {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+@media (max-width: 1400px) { .mat-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px)  { .mat-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mat-kpi .stat-value { font-size: var(--fs-2xl); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mat-kpi-unit { font-size: var(--fs-md); font-weight: 600; color: var(--text-muted); letter-spacing: 0; }
+.mat-kpi .stat-foot { border-top-width: 2px; margin-top: auto; }
+
+.mat-legend { flex-wrap: wrap; row-gap: 6px; }
+.mat-hm-legend { margin-bottom: var(--sp-4); }
+
+/* One long 100% bar per row; the label column keeps every bar the same length. */
+.mat-bars { display: flex; flex-direction: column; gap: var(--sp-3); }
+.mat-bar-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; gap: var(--sp-4); }
+.mat-bar-label { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.mat-bar-label strong { font-weight: 600; }
+.mat-bar-label span { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mat-bar { display: flex; gap: 2px; height: 30px; min-width: 0; }
+.mat-bar.is-empty { background: var(--viz-neutral); border-radius: 4px; }
+.mat-seg {
+  display: grid; place-items: center; min-width: 0; overflow: hidden;
+  font-size: var(--fs-xs); font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.mat-seg:first-child { border-radius: 4px 0 0 4px; }
+.mat-seg:last-child { border-radius: 0 4px 4px 0; }
+.mat-seg:only-child { border-radius: 4px; }
+.mat-seg:hover { filter: brightness(.92); }
+.mat-divider { height: 1px; background: var(--border); margin-block: var(--sp-1); }
+
+.mat-split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--sp-4); margin-top: var(--sp-4); }
+.mat-split > .card + .card { margin-top: 0; }
+.mat-split + .card { margin-top: var(--sp-4); }
+@media (max-width: 1200px) { .mat-split { grid-template-columns: minmax(0, 1fr); } }
+
+.mat-avg {
+  display: inline-block; min-width: 34px; padding: 2px 8px; border-radius: var(--r-sm);
+  font-weight: 650; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; text-align: center;
+}
+.mat-matrix tr.is-total td { font-weight: 650; background: var(--surface-2); }
+.mat-model td, .mat-model th { vertical-align: top; white-space: normal; font-size: var(--fs-sm); }
+.mat-model thead th { white-space: nowrap; }
+.mat-model tbody th { position: static; background: var(--surface-2); color: var(--text-primary); }
+
+/* Heatmap: fixed-size cells, so a 37-control domain is a visibly longer bar
+   than an 8-control one. */
+.hm-block + .hm-block { margin-top: var(--sp-5); }
+.hm-head { display: flex; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-2); flex-wrap: wrap; }
+.hm-head span { font-size: var(--fs-sm); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.hm-domain { display: flex; flex-direction: column; gap: 3px; overflow-x: auto; padding-bottom: 2px; }
+.hm-row { display: grid; grid-template-columns: 72px auto; align-items: center; gap: var(--sp-2); }
+.hm-row-label { font-size: var(--fs-xs); color: var(--text-secondary); text-align: right; }
+.hm-row.is-main .hm-row-label { font-weight: 650; color: var(--text-primary); }
+.hm-cells { display: flex; gap: 3px; }
+.hm-body { container-type: inline-size; }
+/* Every domain shares one cell width, sized so the longest domain just fits
+   the card (capped at 30px) — so strip length still reads as domain size. */
+.hm-cell {
+  width: clamp(16px, calc((100cqw - 80px - var(--hm-n, 37) * 3px) / var(--hm-n, 37)), 30px); height: 12px; flex: none; padding: 0; border: 0; border-radius: 3px; cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.hm-row.is-main .hm-cell { height: 28px; }
+.hm-cell.is-unscored {
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, rgba(15, 23, 42, .07) 4px 6px) !important;
+}
+.hm-cell:hover { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.hm-cell:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* Segmented toggle */
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.seg button {
+  background: var(--surface-1); border: 0; padding: 6px 12px; font-size: var(--fs-sm);
+  color: var(--text-secondary); cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--border-strong); }
+.seg button.is-active { background: var(--brand-soft); color: var(--brand-ink); font-weight: 600; }
+
+/* Score badge with its three legs, in the control table */
+.mat-cell { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; cursor: help; }
+.mat-legs { display: flex; gap: 3px; }
+.mat-leg {
+  font-size: 10.5px; font-weight: 650; padding: 1px 5px; border-radius: 4px;
+  font-variant-numeric: tabular-nums; line-height: 1.4;
+}

@@ -76,7 +76,7 @@ export function applyFilters(controls, filters) {
       if (filters.maturity === 'pass' && !isPassed(control)) return false;
       if (filters.maturity === 'fail' && (isPassed(control) || !isScored(control))) return false;
       if (filters.maturity === 'none' && isScored(control)) return false;
-      if (/^[1-5]$/.test(filters.maturity) && control.maturity !== Number(filters.maturity)) return false;
+      if (/^[0-5]$/.test(filters.maturity) && control.maturity !== Number(filters.maturity)) return false;
     }
 
     if (filters.evidence === 'yes' && control.evidence.length === 0) return false;

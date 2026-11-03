@@ -2,7 +2,7 @@ import { el } from '../core/dom.js';
 import { icon } from './icons.js';
 import { state, setFilter, resetFilters } from '../core/store.js';
 import { ownerOptions, domainOptions } from '../data/selectors.js';
-import { MATURITY_PASS_THRESHOLD } from '../data/schema.js';
+import { MATURITY_PASS_THRESHOLD, MATURITY_LEVELS } from '../data/schema.js';
 
 /** Explains the exact-match syntax; shown on hover of either search box. */
 export const SEARCH_HELP =
@@ -73,7 +73,7 @@ export function filterBar(controls) {
       options: [
         { value: 'pass', label: `Score ≥ ${MATURITY_PASS_THRESHOLD}` },
         { value: 'fail', label: `Score < ${MATURITY_PASS_THRESHOLD}` },
-        ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `Exact ${n} / 5` })),
+        ...[0, 1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `Exact ${n} / 5 — ${MATURITY_LEVELS[n].name}` })),
         { value: 'none', label: 'Nog niet beoordeeld' },
       ],
       onchange: (maturity) => setFilter({ maturity }),

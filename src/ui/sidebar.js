@@ -14,6 +14,7 @@ import { TASK_PROJECTS } from '../data/tasks.js';
  */
 export const NAV = [
   { route: 'dashboard', label: 'Dashboard', icon: 'grid', enabled: true },
+  { route: 'maturiteit', label: 'Maturiteit', title: 'ISMS Maturiteit', icon: 'gauge', enabled: true },
 
   {
     header: 'GRC',

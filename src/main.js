@@ -8,6 +8,7 @@ import { closeDetailPane } from './ui/detailPane.js';
 import { closeColumnPicker } from './ui/columnPicker.js';
 import { TASK_PROJECTS } from './data/tasks.js';
 import { dashboardView } from './views/dashboard.js';
+import { maturityView } from './views/maturity.js';
 import { controlsView } from './views/controls.js';
 import { evidenceView, beleidView, risicosView } from './views/library.js';
 import { tasksView } from './views/tasks.js';
@@ -21,6 +22,7 @@ const viewHost = document.getElementById('view');
 /** Route table. A disabled NAV entry falls through to the placeholder. */
 const ROUTES = {
   dashboard: dashboardView,
+  maturiteit: maturityView,
   beheersmaatregelen: controlsView,
   evidence: evidenceView,
   beleid: beleidView,

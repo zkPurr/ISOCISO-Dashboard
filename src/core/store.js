@@ -26,7 +26,7 @@ export const state = {
     query: '',
     owner: '',
     domain: '',
-    maturity: '',   // '', 'pass' (>=3), 'fail' (<3), '1'..'5', 'none'
+    maturity: '',   // '', 'pass' (>=3), 'fail' (<3), '0'..'5', 'none'
     evidence: '',   // '', 'yes', 'no'
   },
 
@@ -68,7 +68,8 @@ export const state = {
   /** Column picker open state. Deliberately not persisted. */
   taskColumnsOpen: false,
 
-  ui: { sidebarCollapsed: false },
+  /** heatmapDetail: show the Proces / Beleid / Evidence rows under each score strip. */
+  ui: { sidebarCollapsed: false, heatmapDetail: true },
 };
 
 export function subscribe(fn) {

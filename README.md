@@ -44,7 +44,10 @@ Herkende kolommen (hoofdletters, spaties en underscores maken niet uit):
 | `Control_Title` | nee | |
 | `Domain` | nee | `Organizational` / `People` / `Physical` / `Technological` worden vertaald naar Organisatorisch / Mensgericht / Fysiek / Technologisch |
 | `Owner` | nee | |
-| `Kwaliteitsmaturiteit_27002` | nee | 1–5; leeg = "nog niet beoordeeld" |
+| `Maturiteit_Score` | nee | 0–5; leeg = "nog niet beoordeeld". Oude naam `Kwaliteitsmaturiteit_27002` werkt nog |
+| `Maturiteit_Proces` | nee | 0–5 |
+| `Maturiteit_Beleid` | nee | 0–5 |
+| `Maturiteit_Evidence` | nee | 0–5 |
 | `Severity_Flag` | nee | leeg = geen vlag; `1` geel, `2` oranje, `3` rood |
 | `Evidence`, `Beleid`, `Risico's` | nee | id's naar de gelijknamige werkbladen; meerdere per cel mag (`1, 4, 7`) |
 
@@ -52,6 +55,28 @@ Ontbrekende kolommen zijn **geen fout**: die velden blijven leeg en de app
 toont "Geen evidence gekoppeld", "Geen beleid gekoppeld" en "Geen risico's
 gekoppeld". Rijen zonder `Control_ID` worden overgeslagen; dubbele
 `Control_ID`'s worden overschreven door de laatste rij.
+
+### Maturiteit — score en dimensies
+
+Elke control wordt op drie dimensies gescoord, 0–5: **Proces**, **Beleid** en
+**Evidence** (herleidbaarheid). `0` is een echt antwoord ("niet uitgevoerd"),
+een lege cel betekent "nog niet beoordeeld".
+
+`Maturiteit_Score` is in de sheet normaal `MIN(Proces, Beleid, Evidence)` — een
+control is zo volwassen als zijn zwakste poot. De importer:
+
+* neemt de waarde uit de sheet als die er staat — ook als die afwijkt van de
+  MIN (een handmatige overschrijving; de app markeert die als "score handmatig");
+* rekent de MIN zelf uit als de cel leeg is (bv. een formule zonder opgeslagen
+  waarde), over de dimensies die wél ingevuld zijn — net als Excel;
+* behandelt een `0` als "niet beoordeeld" wanneer alle drie de dimensies leeg
+  zijn: dat is Excels `MIN` over drie lege cellen, geen echte score.
+
+De pagina **Maturiteit** toont per domein de verdeling over de niveaus, de
+verdeling per dimensie, gemiddelden per domein × dimensie, een heatmap met één
+cel per control (klik = openen in Beheersmaatregelen), de laagst scorende
+controls en het maturiteitsmodel. **Exporteer PDF** maakt daar een A4-rapport
+van (liggend, vector) — jsPDF wordt pas bij de eerste export van cdnjs geladen.
 
 ### Actie Nodig — de Severity_Flag
 
@@ -226,10 +251,13 @@ src/
     taskImporter.js Jira CSV → taken (alle kolommen)
     taskStats.js    verdelingen achter de ringdiagrammen (met "Overig"-vouw)
     selectors.js    filteren, sorteren, pagineren, KPI's, koppelingen
+    maturity.js     verdelingen, gemiddelden en KPI's voor de Maturiteit-pagina en de PDF
     query.js        zoeksyntax: substring, "exact" en Kolom:"exact"
     persist.js      localStorage
     demo.js         93 ISO 27002:2022 controls + demoregisters
-  charts/           donut, gestapelde balken, tooltip
+  charts/           donut, gestapelde balken, maturiteitsbalken + heatmap, tooltip
+  report/
+    maturityPdf.js  PDF-export van het maturiteitsrapport (jsPDF, lazy geladen)
   ui/               sidebar, topbar, statcards, filters, tabel, paginering,
                     modal, detailPane (bottom sheet), links,
                     severity (de gedeelde 1-2-3 vlag), taskTable,
@@ -279,7 +307,7 @@ uitgebreid met een zevende gegenereerde tint (daar is `Overig` voor).
 
 Onder **GRC** zijn **Beheersmaatregelen**, **Evidence**, **Beleid** en
 **Risico's** actief, onder **Taken** de borden **SECU** en **ISMSKACT**, plus
-het **Dashboard** erboven. Rapportages staat in het menu maar is nog
+het **Dashboard** en **Maturiteit** erboven. Rapportages staat in het menu maar is nog
 uitgeschakeld.
 
 In de controltabel:

@@ -2,7 +2,8 @@ import { el } from '../core/dom.js';
 import { icon } from './icons.js';
 import { num } from '../core/format.js';
 import { state, setState } from '../core/store.js';
-import { EMPTY_LABELS, MATURITY_PASS_THRESHOLD, POLICY_FALLBACK_LABEL } from '../data/schema.js';
+import { EMPTY_LABELS, MATURITY_PASS_THRESHOLD, MATURITY_DIMENSIONS, POLICY_FALLBACK_LABEL, maturityLevel } from '../data/schema.js';
+import { isOverride } from '../data/maturity.js';
 import { resolveRefs } from '../data/selectors.js';
 import { openDetailPane } from './detailPane.js';
 import { recordLink } from './links.js';
@@ -20,6 +21,30 @@ function maturityBadge(score) {
       : score === 2 ? 'warn' : 'fail';
 
   return el('span.badge', { className: `badge badge-${tone}` }, `${score} / 5`);
+}
+
+/**
+ * Score badge plus the three legs it is the MIN of — "P2 B3 E1" — so the
+ * weakest dimension is visible without leaving the table. Rows from a sheet
+ * without the dimension columns show the badge alone.
+ */
+function maturityCell(control) {
+  const legs = MATURITY_DIMENSIONS.map((d) => ({ ...d, score: control[d.key] ?? null }));
+  if (legs.every((leg) => leg.score == null)) return maturityBadge(control.maturity);
+
+  return el('.mat-cell', {
+    title: [
+      ...legs.map((leg) => `${leg.label}: ${leg.score ?? 'niet beoordeeld'}`),
+      isOverride(control) ? 'Score wijkt handmatig af van MIN(Proces, Beleid, Evidence)' : null,
+    ].filter(Boolean).join('\n'),
+  }, [
+    maturityBadge(control.maturity),
+    el('.mat-legs', legs.map((leg) => {
+      const level = maturityLevel(leg.score);
+      return el('span.mat-leg', { style: { background: level.color, color: level.ink } },
+        `${leg.short}${leg.score ?? '–'}`);
+    })),
+  ]);
 }
 
 const emptyCell = (label) =>
@@ -131,7 +156,7 @@ export function controlsTable(rows) {
     el('td.col-title', control.title || el('span.muted', 'Geen beschrijving')),
     el('td.col-domain', control.domain || el('span.muted', 'Onbekend')),
     el('td.col-owner', control.owner || el('span.muted', 'Geen eigenaar')),
-    el('td.is-center', maturityBadge(control.maturity)),
+    el('td.is-center', maturityCell(control)),
     el('td.is-center', paneCell(control, 'evidence', 'Evidence', EMPTY_LABELS.evidence)),
     el('td.is-center', policyCell(control)),
     el('td.is-center', paneCell(control, 'risks', "Risico's", EMPTY_LABELS.risks)),

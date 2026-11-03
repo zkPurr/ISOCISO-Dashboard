@@ -1,5 +1,19 @@
 .git
 .DS_Store
 Dockerfile
+.dockerignore
 compose.yaml
 README.md
+.gitignore
+.claude
+serve.py
+netlify.toml
+# Everything here is served publicly from the web root — keep stray local
+# files (screenshots, exports) out of the image.
+*.jpeg
+*.jpg
+*.png
+*.pdf
+*.xlsx
+*.xls
+*.csv

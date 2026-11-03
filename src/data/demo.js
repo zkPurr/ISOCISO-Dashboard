@@ -6,7 +6,7 @@
  * this entirely.
  */
 
-import { buildControl, refKey } from './schema.js';
+import { buildControl, deriveMaturity, refKey } from './schema.js';
 import { toLink } from '../core/url.js';
 
 const ORG = 'Organizational';
@@ -132,7 +132,23 @@ function hash(str) {
 }
 
 /** Weighted so the mix looks like a real, partly-mature programme. */
-const SCORE_CURVE = [1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, null];
+const SCORE_CURVE = [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, null];
+
+/** How far each of the other two dimensions sits above the weakest one. */
+const DIMENSION_LIFT = [0, 0, 1, 1, 1, 2, 3];
+
+/**
+ * Three dimension scores whose MIN is `score` — the weakest leg rotates
+ * between Proces, Beleid and Evidence so no dimension is always the culprit.
+ * A null score leaves all three empty, like an unassessed row in the sheet.
+ */
+function dimensionScores(score, seed) {
+  if (score == null) return [null, null, null];
+  const weakest = seed % 3;
+  return [0, 1, 2].map((i) => (i === weakest
+    ? score
+    : Math.min(5, score + DIMENSION_LIFT[(seed >> (3 + i * 3)) % DIMENSION_LIFT.length])));
+}
 
 /** Most rows carry no Severity_Flag at all — a flag has to stay exceptional. */
 const SEVERITY_CURVE = [
@@ -249,7 +265,12 @@ export function buildDemoControls() {
     const owners = OWNERS[row[2]];
     const control = buildControl(row, map);
     control.owner = owners[seed % owners.length];
-    control.maturity = SCORE_CURVE[seed % SCORE_CURVE.length];
+    // Maturiteit_Score left empty on purpose: deriveMaturity() fills it as the
+    // MIN of the three, exactly as an imported sheet without the formula would.
+    [control.matProcess, control.matPolicy, control.matEvidence] =
+      dimensionScores(SCORE_CURVE[seed % SCORE_CURVE.length], seed);
+    control.maturity = null;
+    deriveMaturity(control);
     control.severity = SEVERITY_CURVE[(seed >> 9) % SEVERITY_CURVE.length];
     control.evidence = pickRefs(seed, EVIDENCE_ROWS, EVIDENCE_COUNTS);
     control.policies = pickRefs(seed >> 3, POLICY_ROWS, POLICY_COUNTS);
@@ -277,7 +298,7 @@ export function demoSource() {
     rowCount: ROWS.length,
     skippedRows: 0,
     headerRowIndex: 1,
-    mapped: ['rawId', 'title', 'domain', 'owner', 'maturity', 'severity', 'evidence', 'policies', 'risks'],
+    mapped: ['rawId', 'title', 'domain', 'owner', 'maturity', 'matProcess', 'matPolicy', 'matEvidence', 'severity', 'evidence', 'policies', 'risks'],
     unmatched: [],
     libraries: {
       evidence: sheet('evidence', 'Evidence'),
