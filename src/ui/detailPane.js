@@ -96,12 +96,14 @@ function paneBody(kind, control) {
 }
 
 /**
- * @param {{ control: import('../data/schema.js').Control, kind: 'evidence'|'policies'|'risks' }} opts
+ * Opens a bottom sheet. Shared by the register pane below and the growth
+ * advice pane, so there is only ever one sheet open and Escape, the backdrop
+ * and focus return all behave the same.
+ *
+ * @param {{ label: string, eyebrow: string, eyebrowIcon: string, title: string,
+ *           body: Node, foot?: Node[] }} opts
  */
-export function openDetailPane({ control, kind }) {
-  const definition = LOOKUP_BY_KEY[kind];
-  if (!definition) return;
-
+export function openPane({ label, eyebrow, eyebrowIcon, title, body, foot = [] }) {
   const opener = document.activeElement;
   closeDetailPane();
   returnFocus = opener instanceof HTMLElement ? opener : null;
@@ -112,29 +114,16 @@ export function openDetailPane({ control, kind }) {
     onclick: closeDetailPane,
   }, icon('x', { size: 18 }));
 
-  const pane = el('.pane', {
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': `${definition.label} bij ${control.id}`,
-  }, [
+  const pane = el('.pane', { role: 'dialog', 'aria-modal': 'true', 'aria-label': label }, [
     el('.pane-head', [
       el('.pane-head-main', [
-        el('.pane-eyebrow', [
-          icon(definition.icon, { size: 15 }),
-          `${definition.label} bij ${control.id}`,
-        ]),
-        el('.pane-title', control.title || 'Geen beschrijving'),
+        el('.pane-eyebrow', [icon(eyebrowIcon, { size: 15 }), eyebrow]),
+        el('.pane-title', title),
       ]),
       closeButton,
     ]),
-    paneBody(kind, control),
-    el('.pane-foot', [
-      el('span.muted', `${control[kind].length} gekoppeld in de bronsheet`),
-      el('button.btn.btn-sm', {
-        type: 'button',
-        onclick: () => { closeDetailPane(); navigate(definition.route); },
-      }, [`Alle ${definition.label.toLowerCase()} bekijken`, icon('chevronRight', { size: 15 })]),
-    ]),
+    body,
+    foot.length ? el('.pane-foot', foot) : null,
   ]);
 
   backdrop = el('.pane-backdrop', {
@@ -144,4 +133,27 @@ export function openDetailPane({ control, kind }) {
   document.body.append(backdrop);
   document.addEventListener('keydown', onKeydown);
   closeButton.focus({ preventScroll: true });
+}
+
+/**
+ * @param {{ control: import('../data/schema.js').Control, kind: 'evidence'|'policies'|'risks' }} opts
+ */
+export function openDetailPane({ control, kind }) {
+  const definition = LOOKUP_BY_KEY[kind];
+  if (!definition) return;
+
+  openPane({
+    label: `${definition.label} bij ${control.id}`,
+    eyebrow: `${definition.label} bij ${control.id}`,
+    eyebrowIcon: definition.icon,
+    title: control.title || 'Geen beschrijving',
+    body: paneBody(kind, control),
+    foot: [
+      el('span.muted', `${control[kind].length} gekoppeld in de bronsheet`),
+      el('button.btn.btn-sm', {
+        type: 'button',
+        onclick: () => { closeDetailPane(); navigate(definition.route); },
+      }, [`Alle ${definition.label.toLowerCase()} bekijken`, icon('chevronRight', { size: 15 })]),
+    ],
+  });
 }

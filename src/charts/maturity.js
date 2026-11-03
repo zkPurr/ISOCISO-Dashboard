@@ -1,7 +1,8 @@
 import { el } from '../core/dom.js';
 import { num, pct } from '../core/format.js';
 import { attachTooltip } from './tooltip.js';
-import { MATURITY_LEVELS, MATURITY_UNSCORED, maturityLevel } from '../data/schema.js';
+import { donutChart } from './donut.js';
+import { MATURITY_LEVELS, MATURITY_UNSCORED, MATURITY_PASS_THRESHOLD, maturityLevel } from '../data/schema.js';
 import { SCORE_SERIES, scoreOf, formatAvg, shortControlLabel, isOverride } from '../data/maturity.js';
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
@@ -56,6 +57,27 @@ export function levelBar(dist, { label, sub, noun = 'controls' }) {
   ]);
 }
 
+/**
+ * Pie (donut) of the level distribution for one domain. The centre shows the
+ * average; the legend lists every level that occurs, so a slice is never
+ * identified by colour alone. Levels with no controls are left out of the
+ * legend to keep four of these side by side readable.
+ */
+export function levelDonut(dist, { title, series }) {
+  const atTarget = dist.counts.slice(MATURITY_PASS_THRESHOLD).reduce((a, b) => a + b, 0);
+  const segments = segmentsOf(dist)
+    .filter((s) => s.value > 0)
+    .map((s) => ({ label: s.label, value: s.value, color: s.color }));
+
+  return donutChart({
+    title,
+    centerValue: formatAvg(dist.avg),
+    segments: segments.length ? segments : [{ label: 'Geen controls', value: 0, color: MATURITY_UNSCORED.color }],
+    legendPercent: true,
+    note: `${num(dist.total)} controls · gem. ${series.toLowerCase()} ${formatAvg(dist.avg)} · ${pct(atTarget, dist.total)}% op niveau ≥ ${MATURITY_PASS_THRESHOLD}`,
+  });
+}
+
 /** Matrix of averages: domains down, Score / Proces / Beleid / Evidence across. */
 export function averageTable(matrix) {
   const cell = (value) => {
@@ -92,7 +114,7 @@ function cellTooltip(control) {
     control.owner ? `Eigenaar: ${escape(control.owner)}` : '',
     ...lines,
     isOverride(control) ? '<em>Score handmatig afwijkend van MIN</em>' : '',
-    '<span style="opacity:.75">Klik om te openen in Beheersmaatregelen</span>',
+    '<span style="opacity:.75">Klik voor groeiadvies</span>',
   ].filter(Boolean).join('<br>');
 }
 

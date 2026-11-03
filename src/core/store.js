@@ -69,7 +69,8 @@ export const state = {
   taskColumnsOpen: false,
 
   /** heatmapDetail: show the Proces / Beleid / Evidence rows under each score strip. */
-  ui: { sidebarCollapsed: false, heatmapDetail: true },
+  /** pieSeries / adviceDim: which score the donuts show, which dimension the growth path shows. */
+  ui: { sidebarCollapsed: false, heatmapDetail: true, pieSeries: 'maturity', adviceDim: 'matPolicy' },
 };
 
 export function subscribe(fn) {

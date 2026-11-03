@@ -826,3 +826,90 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
   font-size: 10.5px; font-weight: 650; padding: 1px 5px; border-radius: 4px;
   font-variant-numeric: tabular-nums; line-height: 1.4;
 }
+
+/* ---------------------------------------------------------------- Pies per domein */
+.viz-grid-4 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-5); }
+.viz-grid-4 > * + * { border-left: 1px solid var(--border); padding-left: var(--sp-5); }
+/* Donut above its legend: five side by side leaves no room for both in a row. */
+.viz-grid-4 .donut-row { flex-direction: column; align-items: center; flex: 1; justify-content: flex-start; }
+.viz-grid-4 .legend { width: 100%; gap: 6px; font-size: var(--fs-sm); }
+.viz-grid-4 .legend-name { overflow: hidden; text-overflow: ellipsis; }
+.viz-grid-4 .viz-title { text-align: center; }
+.viz-grid-4 .bar-sub { min-height: calc(1.5em * 2); text-align: left; }
+@media (max-width: 1400px) {
+  .viz-grid-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: var(--sp-6); }
+  .viz-grid-4 > :nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 900px) {
+  .viz-grid-4 { grid-template-columns: minmax(0, 1fr); }
+  .viz-grid-4 > * { border-left: 0 !important; padding-left: 0 !important; }
+}
+
+/* ---------------------------------------------------------------- Groeipad */
+.adv-why { color: var(--text-secondary); font-size: var(--fs-sm); line-height: 1.55; margin-bottom: var(--sp-4); }
+/* A staircase: each step sits a little higher than the one before, like the
+   maturity model it comes from. */
+.grow-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-3); align-items: end; }
+.grow-step {
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  background: var(--surface-2); border: 1px solid var(--border); border-top: 4px solid;
+  border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  margin-top: calc((4 - var(--rise)) * 18px);
+  align-self: stretch;
+}
+.grow-step-head { display: flex; align-items: center; gap: 6px; }
+.grow-step-name { font-size: var(--fs-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-left: auto; }
+.grow-step-title { font-size: var(--fs-md); line-height: 1.35; }
+.grow-count {
+  margin-top: auto; font-size: var(--fs-xs); font-weight: 650; color: var(--brand-ink);
+  background: var(--brand-soft); border-radius: var(--r-sm); padding: 4px 8px; font-variant-numeric: tabular-nums;
+}
+.grow-count.is-zero { color: var(--text-muted); background: var(--wash-none-bg); font-weight: 500; }
+@media (max-width: 1300px) {
+  .grow-steps { grid-template-columns: minmax(0, 1fr); }
+  .grow-step { margin-top: 0; }
+}
+
+.adv-arrow { color: var(--text-muted); font-weight: 600; }
+.adv-actions { list-style: disc; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.45; }
+.adv-done { display: flex; gap: 6px; font-size: var(--fs-sm); line-height: 1.45; color: var(--wash-pass-fg); }
+.adv-done svg { margin-top: 2px; }
+.adv-done strong { font-weight: 650; }
+
+/* Advice pane */
+.adv-body { display: flex; flex-direction: column; gap: var(--sp-3); padding-block: var(--sp-4); }
+.adv-h { font-size: var(--fs-lg); font-weight: 650; margin-top: var(--sp-2); }
+.adv-why:empty { display: none; }
+.adv-body .adv-why { margin-bottom: 0; }
+.adv-ladder { display: flex; flex-direction: column; gap: 6px; }
+.adv-ladder-row { display: grid; grid-template-columns: 70px auto 1fr; align-items: center; gap: var(--sp-3); }
+.adv-ladder-label { font-weight: 600; font-size: var(--fs-sm); }
+.adv-ladder-steps { display: flex; gap: 3px; }
+.adv-rung {
+  width: 30px; height: 22px; display: grid; place-items: center; border-radius: 4px;
+  font-size: 11px; font-weight: 650; background: var(--wash-none-bg); color: var(--text-muted);
+  border: 1px solid transparent;
+}
+.adv-rung.is-next { border: 2px dashed var(--text-primary); color: var(--text-primary); background: var(--surface-1); }
+.adv-ladder-note { font-size: var(--fs-xs); color: var(--text-muted); }
+.adv-step { border: 1px solid var(--border); border-top: 4px solid; border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+.adv-step-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.adv-step-head strong { margin-left: 6px; }
+.adv-dim {
+  font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--text-secondary); margin-right: 4px;
+}
+.adv-more summary { cursor: pointer; font-size: var(--fs-sm); color: var(--brand-ink); font-weight: 600; padding: var(--sp-2) 0; }
+.adv-more .adv-step + .adv-step { margin-top: var(--sp-2); }
+
+/* "Volgende stap" column */
+td.adv-next { min-width: 260px; }
+.adv-next-btn {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; background: none; border: 0; padding: 0;
+  font: inherit; font-size: var(--fs-sm); color: var(--brand-ink); cursor: pointer;
+}
+.adv-next-btn:hover { text-decoration: underline; }
+button.mat-cell { background: none; border: 0; padding: 2px 4px; font: inherit; border-radius: var(--r-sm); cursor: pointer; }
+button.mat-cell:hover { background: var(--surface-hover); }
+/* The advice needs more room than a list of links. */
+.pane:has(.adv-body) { max-height: min(84vh, 780px); }

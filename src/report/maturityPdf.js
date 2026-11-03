@@ -15,6 +15,7 @@ import {
   maturityKpis, weakestControls, formatAvg, scoreOf, shortControlLabel, isOverride,
 } from '../data/maturity.js';
 import { compareControlId, dateTime, pct } from '../core/format.js';
+import { ADVICE, controlAdvice } from '../data/advice.js';
 
 const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 let jspdfPromise = null;
@@ -301,6 +302,204 @@ function modelTable(p, doc, y) {
   return y;
 }
 
+/* ------------------------------------------------------------------ Pies */
+
+/** Filled annular sector as a polygon — jsPDF has no arc primitive. */
+function sector(doc, cx, cy, r0, r1, a0, a1) {
+  const steps = Math.max(2, Math.ceil(((a1 - a0) / (Math.PI * 2)) * 72));
+  const pts = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const a = a0 + ((a1 - a0) * i) / steps - Math.PI / 2;
+    pts.push([cx + r1 * Math.cos(a), cy + r1 * Math.sin(a)]);
+  }
+  for (let i = steps; i >= 0; i -= 1) {
+    const a = a0 + ((a1 - a0) * i) / steps - Math.PI / 2;
+    pts.push([cx + r0 * Math.cos(a), cy + r0 * Math.sin(a)]);
+  }
+  const deltas = pts.slice(1).map(([x, y], i) => [x - pts[i][0], y - pts[i][1]]);
+  doc.lines(deltas, pts[0][0], pts[0][1], [1, 1], 'F', true);
+}
+
+function donut(p, doc, dist, { cx, cy, r }) {
+  const segments = [
+    ...MATURITY_LEVELS.map((level) => ({ ...level, value: dist.counts[level.level] })),
+    { ...MATURITY_UNSCORED, value: dist.unscored },
+  ].filter((s) => s.value > 0);
+  const inner = r * 0.62;
+  const gap = segments.length > 1 ? 0.6 / ((r + inner) / 2) : 0;
+
+  if (!dist.total) {
+    p.fill(MATURITY_UNSCORED.color); sector(doc, cx, cy, inner, r, 0, Math.PI * 2 - 0.001);
+  } else {
+    let cursor = 0;
+    for (const segment of segments) {
+      const sweep = (segment.value / dist.total) * Math.PI * 2;
+      const a0 = cursor + gap / 2;
+      const a1 = cursor + sweep - gap / 2;
+      cursor += sweep;
+      if (a1 <= a0) continue;
+      p.fill(segment.color);
+      sector(doc, cx, cy, inner, r, a0, Math.min(a1, a0 + Math.PI * 2 - 0.001));
+      // Percentage on the slice itself when the slice is big enough to hold it.
+      const share = pct(segment.value, dist.total);
+      if (share >= 9) {
+        const mid = (a0 + a1) / 2 - Math.PI / 2;
+        const lr = (r + inner) / 2;
+        p.font(6, 'bold'); p.color(segment.ink);
+        p.text(`${share}%`, cx + lr * Math.cos(mid), cy + lr * Math.sin(mid), { align: 'center' });
+      }
+    }
+  }
+  p.font(10, 'bold'); p.color(INK);
+  p.text(formatAvg(dist.avg), cx, cy - 1, { align: 'center' });
+  p.font(5.5); p.color(INK_3);
+  p.text('gem.', cx, cy + 3, { align: 'center' });
+}
+
+/** Matrix of pies: one row per series (Score, Proces, Beleid, Evidence), one column per domain. */
+function pieMatrix(p, doc, controls, y) {
+  const columns = [{ domain: 'Alle controls', controls }, ...groupByDomain(controls)];
+  const labelW = 26;
+  const colW = (CONTENT_W - labelW) / columns.length;
+  const rowH = 38;
+  const r = 14;
+
+  p.font(8.5, 'bold'); p.color(INK);
+  columns.forEach((col, i) => p.text(col.domain, M + labelW + colW * i + colW / 2, y, { align: 'center' }));
+  y += 4;
+
+  for (const { key, label } of SCORE_SERIES) {
+    p.font(8.5, 'bold'); p.color(INK);
+    p.text(key === 'maturity' ? 'Score (min)' : label, M, y + rowH / 2 - 2);
+    columns.forEach((col, i) => {
+      const dist = distribution(col.controls, key);
+      const cx = M + labelW + colW * i + colW / 2;
+      donut(p, doc, dist, { cx, cy: y + r + 2, r });
+      const atTarget = dist.counts.slice(MATURITY_PASS_THRESHOLD).reduce((a, b) => a + b, 0);
+      p.font(6.5); p.color(INK_2);
+      p.text(`${pct(atTarget, dist.total)}% op niveau >= ${MATURITY_PASS_THRESHOLD}`, cx, y + r * 2 + 6, { align: 'center' });
+    });
+    p.rule(M, y + rowH - 1, M + CONTENT_W, y + rowH - 1);
+    y += rowH;
+  }
+  return y;
+}
+
+/* ------------------------------------------------------------------ Groeipad + actieplan */
+
+/** One dimension's five steps as a staircase of columns. */
+function growthRow(p, doc, dimension, controls, y) {
+  const dist = distribution(controls, dimension.key);
+  const gap = 3;
+  const colW = (CONTENT_W - gap * 4) / 5;
+  const pad = 2.5;
+  const lineH = 2.9;
+
+  // Measure first so the whole row moves to a new page if it doesn't fit.
+  const blocks = ADVICE[dimension.key].map((step, from) => {
+    p.font(8, 'bold');
+    const title = doc.splitTextToSize(safe(step.title), colW - pad * 2);
+    p.font(6.8);
+    const actions = step.actions.map((a) => doc.splitTextToSize(safe(a), colW - pad * 2 - 3));
+    const done = doc.splitTextToSize(safe(`Klaar als: ${step.done}`), colW - pad * 2);
+    const h = 8 + title.length * 3.4 + 1.5 + actions.reduce((n, l) => n + l.length, 0) * lineH
+      + actions.length * 0.8 + 1.5 + done.length * lineH + 8;
+    return { step, from, title, actions, done, h };
+  });
+  const rise = 3;
+  const tallest = Math.max(...blocks.map((b, i) => b.h + (4 - i) * rise));
+  if (y + 7 + tallest > BOTTOM) { doc.addPage(); y = TOP + 2; }
+
+  p.font(10, 'bold'); p.color(INK);
+  p.text(`${dimension.label}`, M, y);
+  p.font(7.5); p.color(INK_3);
+  p.text(`gem. ${formatAvg(dist.avg)} · ${dist.scored} van ${dist.total} beoordeeld`, M + doc.getTextWidth(safe(dimension.label)) + 14, y);
+  y += 4;
+
+  const baseY = y + tallest;
+  blocks.forEach((b, i) => {
+    const x = M + i * (colW + gap);
+    const top = y + (4 - i) * rise;
+    const to = b.from + 1;
+    p.box(x, top, colW, baseY - top, PLANE, 1.2);
+    p.box(x, top, colW, 1.2, MATURITY_LEVELS[to].color);
+
+    let cy = top + 5;
+    const chip = (lvl, cx) => {
+      const l = MATURITY_LEVELS[lvl];
+      p.box(cx, cy - 2, 5, 4, l.color, 0.6);
+      p.font(7, 'bold'); p.color(l.ink); p.text(String(lvl), cx + 2.5, cy, { align: 'center' });
+    };
+    chip(b.from, x + pad);
+    p.font(7, 'bold'); p.color(INK_3); p.text('->', x + pad + 6, cy);
+    chip(to, x + pad + 10.5);
+    p.font(6.5, 'bold'); p.color(INK_3);
+    p.text(MATURITY_LEVELS[to].name.toUpperCase(), x + colW - pad, cy, { align: 'right' });
+    cy += 5;
+
+    p.font(8, 'bold'); p.color(INK);
+    b.title.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += 3.4; });
+    cy += 1.5;
+
+    p.font(6.8); p.color(INK_2);
+    for (const lines of b.actions) {
+      p.box(x + pad + 0.3, cy - 0.5, 1, 1, INK_3, 0.5);
+      lines.forEach((line) => { doc.text(line, x + pad + 3, cy, { baseline: 'middle' }); cy += lineH; });
+      cy += 0.8;
+    }
+    cy += 1.5;
+    p.color('#0a7d0a');
+    b.done.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += lineH; });
+
+    const waiting = dist.counts[b.from];
+    p.font(6.8, 'bold'); p.color(waiting ? BRAND : INK_3);
+    p.text(waiting ? `${waiting} ${waiting === 1 ? 'control staat' : 'controls staan'} op ${b.from}` : `Geen controls op ${b.from}`, x + pad, baseY - 3.5);
+  });
+  return baseY + 8;
+}
+
+/** Per weak control: where it stands and the step(s) that raise its score. */
+function actionPlan(p, doc, controls, y) {
+  const textW = CONTENT_W - 70;
+  y = sectionTitle(p, `Actieplan — ${controls.length} controls onder niveau ${MATURITY_PASS_THRESHOLD}, laagste eerst`, y,
+    'De score is het minimum: alle beperkende dimensies moeten omhoog');
+
+  for (const control of controls) {
+    const advice = controlAdvice(control);
+    p.font(7.2);
+    const lines = advice.blocking.map((b) => ({
+      head: `${b.dimension.label} ${b.from} -> ${b.to}: ${b.step.title}`,
+      body: doc.splitTextToSize(safe(`${b.step.actions.join(' ')} Klaar als: ${b.step.done}`), textW),
+    }));
+    p.font(7.5);
+    const titleLines = doc.splitTextToSize(safe(control.title || '—'), 52).slice(0, 2);
+    const ownerOffset = 6.2 + titleLines.length * 3.1 + 0.6;
+    const h = Math.max(ownerOffset + (control.owner ? 5 : 2), 4 + lines.reduce((n, l) => n + 3.6 + l.body.length * 3 + 1.5, 0));
+    if (y + h > BOTTOM) { doc.addPage(); y = TOP + 2; }
+
+    const level = maturityLevel(control.maturity);
+    p.box(M, y, 9, 9, level.color, 1);
+    p.font(10, 'bold'); p.color(level.ink); p.text(String(control.maturity), M + 4.5, y + 4.5, { align: 'center' });
+    p.font(8.5, 'bold'); p.color(INK); p.text(control.id, M + 12, y + 2.5);
+    p.font(7.5); p.color(INK_2);
+    titleLines.forEach((line, i) => doc.text(line, M + 12, y + 6.2 + i * 3.1, { baseline: 'middle' }));
+    if (control.owner) { p.font(6.8); p.color(INK_3); p.text(p.fit(control.owner, 52), M + 12, y + ownerOffset); }
+
+    let cy = y + 2.5;
+    const tx = M + 70;
+    for (const line of lines) {
+      p.font(8, 'bold'); p.color(INK); p.text(line.head, tx, cy);
+      cy += 3.6;
+      p.font(7.2); p.color(INK_2);
+      line.body.forEach((l) => { doc.text(l, tx, cy, { baseline: 'middle' }); cy += 3; });
+      cy += 1.5;
+    }
+    y += h + 2;
+    p.rule(M, y - 2, M + CONTENT_W, y - 2);
+  }
+  return y + 4;
+}
+
 /** A table that breaks across pages and repeats its header. */
 function controlTable(p, doc, rows, y, { title }) {
   const cols = [
@@ -422,7 +621,13 @@ export async function exportMaturityPdf(controls, source) {
   }
   averageMatrix_(p, averageMatrix(controls), { x: rightX, y, w: rightW });
 
-  /* Page 2 — heatmap per control and the model it scores against */
+  /* Page 2 — pies: every series per domain */
+  doc.addPage();
+  y = sectionTitle(p, 'Verdeling per domein — taartdiagrammen', TOP + 2, 'Midden: gemiddelde · rij per score/dimensie, kolom per domein');
+  legend(p, doc, M, y);
+  pieMatrix(p, doc, controls, y + 8);
+
+  /* Page 3 — heatmap per control and the model it scores against */
   doc.addPage();
   y = TOP + 2;
   y = sectionTitle(p, 'Heatmap per control', y, 'Bovenste rij: score (min) met controlnummer · daaronder Proces, Beleid, Evidence');
@@ -433,13 +638,17 @@ export async function exportMaturityPdf(controls, source) {
   y = sectionTitle(p, 'Maturiteitsmodel', y);
   modelTable(p, doc, y);
 
-  /* Page 3+ — the controls behind the numbers */
+  /* Groeipad — what each step up means, per dimension */
+  doc.addPage();
+  y = sectionTitle(p, 'Groeipad — wat is er nodig voor het volgende niveau', TOP + 2, 'Per dimensie: acties en wanneer het niveau bereikt is');
+  y += 2;
+  for (const dimension of MATURITY_DIMENSIONS) y = growthRow(p, doc, dimension, controls, y);
+
+  /* Actieplan + the controls behind the numbers */
   doc.addPage();
   y = TOP + 2;
   const weakest = weakestControls(controls, 15);
-  if (weakest.length) {
-    y = controlTable(p, doc, weakest, y, { title: `Aandachtspunten — ${weakest.length} laagste scores onder niveau ${MATURITY_PASS_THRESHOLD}` });
-  }
+  if (weakest.length) y = actionPlan(p, doc, weakest, y);
   const all = [...controls].sort((a, b) => compareControlId(a.id, b.id));
   controlTable(p, doc, all, y, { title: `Alle controls (${all.length})` });
 

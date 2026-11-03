@@ -6,6 +6,7 @@ import { EMPTY_LABELS, MATURITY_PASS_THRESHOLD, MATURITY_DIMENSIONS, POLICY_FALL
 import { isOverride } from '../data/maturity.js';
 import { resolveRefs } from '../data/selectors.js';
 import { openDetailPane } from './detailPane.js';
+import { openAdvicePane } from './advicePane.js';
 import { recordLink } from './links.js';
 import { SEVERITY_HEADER, severityCell, severityRowClass } from './severity.js';
 
@@ -32,8 +33,11 @@ function maturityCell(control) {
   const legs = MATURITY_DIMENSIONS.map((d) => ({ ...d, score: control[d.key] ?? null }));
   if (legs.every((leg) => leg.score == null)) return maturityBadge(control.maturity);
 
-  return el('.mat-cell', {
+  return el('button.mat-cell', {
+    type: 'button',
+    onclick: () => openAdvicePane(control),
     title: [
+      'Klik voor groeiadvies',
       ...legs.map((leg) => `${leg.label}: ${leg.score ?? 'niet beoordeeld'}`),
       isOverride(control) ? 'Score wijkt handmatig af van MIN(Proces, Beleid, Evidence)' : null,
     ].filter(Boolean).join('\n'),

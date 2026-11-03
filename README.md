@@ -74,8 +74,16 @@ control is zo volwassen als zijn zwakste poot. De importer:
 
 De pagina **Maturiteit** toont per domein de verdeling over de niveaus, de
 verdeling per dimensie, gemiddelden per domein × dimensie, een heatmap met één
-cel per control (klik = openen in Beheersmaatregelen), de laagst scorende
-controls en het maturiteitsmodel. **Exporteer PDF** maakt daar een A4-rapport
+cel per control, taartdiagrammen per domein (wisselbaar tussen Score, Proces,
+Beleid en Evidence), het **Groeipad** en de laagst scorende controls met hun
+volgende stap.
+
+**Groeiadvies** — klik op een heatmapcel, een control in de aandachtslijst of
+de score in de controltabel. Je ziet waar de control op elke dimensie staat en
+wat er nodig is voor het volgende niveau: concrete acties plus een "klaar als".
+Omdat de score het minimum is, toont het advies precies de dimensies die de
+score laag houden. De teksten staan in `src/data/advice.js` (één entry per
+dimensie per stap) en zijn daar aan te passen. **Exporteer PDF** maakt daar een A4-rapport
 van (liggend, vector) — jsPDF wordt pas bij de eerste export van cdnjs geladen.
 
 ### Actie Nodig — de Severity_Flag
@@ -252,6 +260,7 @@ src/
     taskStats.js    verdelingen achter de ringdiagrammen (met "Overig"-vouw)
     selectors.js    filteren, sorteren, pagineren, KPI's, koppelingen
     maturity.js     verdelingen, gemiddelden en KPI's voor de Maturiteit-pagina en de PDF
+    advice.js       ← groeiadvies per dimensie per niveau-stap, en per control
     query.js        zoeksyntax: substring, "exact" en Kolom:"exact"
     persist.js      localStorage
     demo.js         93 ISO 27002:2022 controls + demoregisters
