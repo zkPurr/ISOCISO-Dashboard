@@ -274,7 +274,7 @@ async function exportPdf(button) {
   button.disabled = true;
   try {
     const { exportMaturityPdf } = await import('../report/maturityPdf.js');
-    await exportMaturityPdf(state.controls, state.source);
+    await exportMaturityPdf(state.controls);
     toast('PDF-rapport gedownload.', 'success');
   } catch (err) {
     console.error(err);

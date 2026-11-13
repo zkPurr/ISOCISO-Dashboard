@@ -14,7 +14,7 @@ import {
   SCORE_SERIES, distribution, distributionByDomain, averageMatrix, groupByDomain,
   maturityKpis, weakestControls, formatAvg, scoreOf, shortControlLabel, isOverride,
 } from '../data/maturity.js';
-import { compareControlId, dateTime, pct } from '../core/format.js';
+import { compareControlId, pct } from '../core/format.js';
 import { ADVICE, controlAdvice } from '../data/advice.js';
 
 const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -560,7 +560,7 @@ function runningHeadersAndFooters(p, doc, { subtitle, generated }) {
     p.text(`Gegenereerd ${generated}`, PAGE_W - M, 12, { align: 'right' });
     p.rule(M, PAGE_H - 9, PAGE_W - M, PAGE_H - 9);
     p.font(7); p.color(INK_3);
-    p.text('ISOCISO Dashboard · ISO/IEC 27002:2022 maturiteit (Proces · Beleid · Evidence)', M, PAGE_H - 6);
+    p.text('ISO/IEC 27002:2022 maturiteit (Proces · Beleid · Evidence)', M, PAGE_H - 6);
     p.text(`Pagina ${i} van ${pages}`, PAGE_W - M, PAGE_H - 6, { align: 'right' });
   }
 }
@@ -570,9 +570,8 @@ function runningHeadersAndFooters(p, doc, { subtitle, generated }) {
 /**
  * Builds the report and hands it to the browser as a download.
  * @param {import('../data/schema.js').Control[]} controls
- * @param {object|null} source  state.source — file name and import time
  */
-export async function exportMaturityPdf(controls, source) {
+export async function exportMaturityPdf(controls) {
   if (!controls.length) throw new Error('Er zijn geen controls om te exporteren.');
   const JsPDF = await loadJsPdf();
   const doc = new JsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
@@ -580,11 +579,9 @@ export async function exportMaturityPdf(controls, source) {
   const now = new Date();
 
   const kpis = maturityKpis(controls);
-  const subtitle = source
-    ? `${source.fileName} · ingelezen ${dateTime(source.importedAt)} · ${controls.length} controls`
-    : `${controls.length} controls`;
+  const subtitle = `${controls.length} controls`;
 
-  doc.setProperties({ title: 'ISMS Maturiteitsrapport', subject: subtitle, creator: 'ISOCISO Dashboard' });
+  doc.setProperties({ title: 'ISMS Maturiteitsrapport', subject: subtitle });
 
   /* Page 1 — headline numbers and distributions */
   let y = TOP + 2;
