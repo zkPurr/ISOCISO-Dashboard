@@ -40,6 +40,9 @@ async function handleFile(file, statusNode) {
       taskSource: report,
       taskSort: defaultTaskSort(tasks, columns),
       taskQuery: '',
+      // setState merges this key, so each board is cleared explicitly — a
+      // window picked on the old export says nothing about the new one.
+      taskRange: Object.fromEntries(TASK_PROJECTS.map((project) => [project.key, null])),
       taskPage: 1,
       taskColumnsOpen: false,
     });

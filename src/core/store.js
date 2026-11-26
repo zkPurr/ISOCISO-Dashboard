@@ -65,6 +65,13 @@ export const state = {
   /** Separate from the controls' page size: a task row is much denser. 0 = alles. */
   taskPageSize: 100,
 
+  /**
+   * Created-date window for the board charts, per project key:
+   * { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }, '' = open on that side. A board
+   * without an entry shows its full range. Not persisted, like the search.
+   */
+  taskRange: {},
+
   /** Column picker open state. Deliberately not persisted. */
   taskColumnsOpen: false,
 

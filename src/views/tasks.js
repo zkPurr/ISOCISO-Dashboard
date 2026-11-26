@@ -4,7 +4,10 @@ import { num, dateTime } from '../core/format.js';
 import { state, setState } from '../core/store.js';
 import { selectTaskView, tasksForProject, visibleColumns } from '../data/selectors.js';
 import { dueSeverity, TASK_PROJECTS } from '../data/tasks.js';
-import { distribution, assigneeOf, statusOf, labelsOf } from '../data/taskStats.js';
+import {
+  distribution, assigneeOf, statusOf, labelsOf,
+  createdColumn, createdBounds, tasksInRange,
+} from '../data/taskStats.js';
 import { donutChart } from '../charts/donut.js';
 import { taskTable } from '../ui/taskTable.js';
 import { columnPicker } from '../ui/columnPicker.js';
@@ -83,16 +86,84 @@ function toolbar(view, project) {
   ]);
 }
 
+/** "2026-08-10" -> "10 aug 2026" */
+const dayLabel = (value) => new Date(`${value}T00:00`).toLocaleDateString('nl-NL', {
+  day: 'numeric', month: 'short', year: 'numeric',
+});
+
+/**
+ * From / to on the Created date. An empty bound is open on that side, so the
+ * inputs show the board's own first and last day until someone narrows them.
+ */
+function rangePicker(project, bounds, range) {
+  const from = range?.from || '';
+  const to = range?.to || '';
+
+  const commit = (side, value) => {
+    // Chrome reports "0002", "0020", "0202" while a year is still being typed;
+    // committing those would re-render mid-keystroke.
+    if (value && Number(value.slice(0, 4)) < 1900) return;
+
+    const next = { from, to, [side]: value };
+    // Moving one bound past the other drags the other one along.
+    if (next.from && next.to && next.from > next.to) next[side === 'from' ? 'to' : 'from'] = value;
+    // A bound at or beyond the data's own edge narrows nothing — store it as
+    // open, so "full range" stays one state rather than several look-alikes.
+    if (next.from && next.from <= bounds.from) next.from = '';
+    if (next.to && next.to >= bounds.to) next.to = '';
+    setState({ taskRange: { [project.key]: next } });
+  };
+
+  const dateInput = (side, props) => el('input.input', {
+    type: 'date',
+    id: `task-range-${side}`,
+    name: `task-range-${side}`,
+    dataset: { focusId: `task-range-${side}` },
+    onchange: (e) => commit(side, e.target.value),
+    ...props,
+  });
+
+  return el('.range-picker', [
+    el('label.field-label', { for: 'task-range-from' }, 'Aangemaakt van'),
+    dateInput('from', {
+      value: from || bounds.from,
+      min: bounds.from,
+      max: to || bounds.to,
+      'aria-label': 'Aangemaakt vanaf',
+    }),
+    el('label.field-label', { for: 'task-range-to' }, 't/m'),
+    dateInput('to', {
+      value: to || bounds.to,
+      min: from || bounds.from,
+      max: bounds.to,
+      'aria-label': 'Aangemaakt tot en met',
+    }),
+    el('button.btn.btn-sm', {
+      type: 'button',
+      disabled: !from && !to,
+      onclick: () => setState({ taskRange: { [project.key]: null } }),
+    }, [icon('refresh', { size: 14 }), 'Volledige periode']),
+  ]);
+}
+
 /**
  * The board at a glance: who has the work, what state it is in, what it is
- * tagged with.
+ * tagged with — optionally narrowed to the tasks created in a date window.
  *
  * Deliberately the whole board, not the current search — a hue belongs to an
  * assignee, not to their rank, so a filter that reshuffles the counts must not
  * repaint the slices underneath you. The table below answers "what matches
- * what I typed"; this panel answers "what does this board look like".
+ * what I typed"; this panel answers "what does this board look like". The
+ * date window is the exception because it is this panel's own control, right
+ * above the charts it changes.
  */
-function boardCharts(tasks, columns, project) {
+function boardCharts(boardTasks, columns, project) {
+  const created = createdColumn(columns);
+  const bounds = created ? createdBounds(boardTasks, created) : null;
+  const range = bounds ? state.taskRange[project.key] : null;
+  const tasks = bounds ? tasksInRange(boardTasks, created, range) : boardTasks;
+  const narrowed = tasks !== boardTasks;
+
   const byAssignee = distribution(tasks, assigneeOf(columns), { emptyLabel: 'Niet toegewezen' });
   const byStatus = distribution(tasks, statusOf(columns), { emptyLabel: 'Geen status' });
   const byLabel = distribution(tasks, labelsOf(columns), { emptyLabel: 'Geen label' });
@@ -102,10 +173,24 @@ function boardCharts(tasks, columns, project) {
       ? 'staat' : `${num(result.folded)} staan`} onder "Overig".`
     : null);
 
+  // Tasks with no Created date cannot sit inside any window — say how many
+  // dropped out for that reason, so the totals still add up.
+  const undated = narrowed ? boardTasks.filter((task) => task.parsed[created.key] == null).length : 0;
+  const scope = narrowed
+    ? [
+      `${num(tasks.length)} van ${num(boardTasks.length)} taken, aangemaakt `
+        + `${dayLabel(range.from || bounds.from)} t/m ${dayLabel(range.to || bounds.to)}`,
+      undated ? `${num(undated)} zonder aanmaakdatum niet meegeteld` : '',
+    ].filter(Boolean).join(' · ')
+    : `${num(tasks.length)} taken op dit bord`;
+
   return el('.card', [
-    el('.card-head', [
-      el('.card-title', `${project.label} in één oogopslag`),
-      el('span.table-foot-info', `${num(tasks.length)} taken op dit bord`),
+    el('.card-head.chart-head', [
+      el('div', [
+        el('.card-title', `${project.label} in één oogopslag`),
+        el('.table-foot-info', scope),
+      ]),
+      bounds && rangePicker(project, bounds, range),
     ]),
     el('.card-body', el('.viz-grid-3', [
       donutChart({

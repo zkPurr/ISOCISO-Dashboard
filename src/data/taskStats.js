@@ -102,3 +102,64 @@ export const labelsOf = (columns) => (task) => {
     .map((part) => part.trim())
     .filter(Boolean);
 };
+
+/* ------------------------------------------------------------------
+   Date range. The charts can be narrowed to the tasks created in a
+   window; an empty bound means "open on that side", so the default
+   — both empty — is the whole board.
+   ------------------------------------------------------------------ */
+
+const pad = (n) => String(n).padStart(2, '0');
+
+/** ms -> "2026-08-10", in local time — the value format of <input type="date">. */
+export function toDayValue(ms) {
+  const date = new Date(ms);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** "2026-08-10" -> local midnight in ms, or null for an empty or broken value. */
+function fromDayValue(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
+}
+
+/** The column the range applies to. Null when the export has no Created. */
+export const createdColumn = (columns) => columnByRole(columns, 'created');
+
+/** First and last Created date on the board, as day values; null when none is filled in. */
+export function createdBounds(tasks, column) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const task of tasks) {
+    const at = task.parsed[column.key];
+    if (at == null) continue;
+    if (at < min) min = at;
+    if (at > max) max = at;
+  }
+  return min === Infinity ? null : { from: toDayValue(min), to: toDayValue(max) };
+}
+
+/**
+ * The tasks created within `range`, both days inclusive.
+ *
+ * With no bound set nothing is dropped — not even a task without a Created
+ * date. Once a bound is set such a task cannot be placed inside it, so it
+ * falls out; the caller says how many did.
+ *
+ * @param {{ from?: string, to?: string }|null} range
+ */
+export function tasksInRange(tasks, column, range) {
+  const from = fromDayValue(range?.from);
+  const to = fromDayValue(range?.to);
+  if (from == null && to == null) return tasks;
+
+  // The end day counts in full: everything before the next midnight.
+  const end = to == null ? null : new Date(to).setDate(new Date(to).getDate() + 1);
+
+  return tasks.filter((task) => {
+    const at = task.parsed[column.key];
+    if (at == null) return false;
+    return (from == null || at >= from) && (end == null || at < end);
+  });
+}

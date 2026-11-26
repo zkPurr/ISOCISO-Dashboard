@@ -491,6 +491,24 @@ button.chip:hover { background: var(--brand-soft); border-color: var(--brand-sof
 .checkrow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .checkrow.is-locked { color: var(--text-muted); cursor: not-allowed; }
 
+/* ---------------------------------------------------------------- Chart date range */
+/* Title on the left, the window it is drawn over on the right; on a narrow
+   card the picker drops below the title rather than squeezing it. */
+.chart-head { flex-wrap: wrap; align-items: flex-end; }
+.chart-head .table-foot-info { display: block; margin-top: 2px; }
+.range-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.range-picker .input {
+  width: auto;
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------------------------------------------------------------- Task table */
 .toolbar {
   display: flex;
