@@ -442,34 +442,47 @@ function pieMatrix(p, doc, controls, y) {
 
 /* ------------------------------------------------------------------ Groeipad + actieplan */
 
-/** One dimension's five steps as a staircase of columns. */
+/**
+ * One dimension's five steps as a staircase of columns. Each step: a band in
+ * the colour of the level it reaches, the goal, numbered actions, and at the
+ * foot a "Klaar als" box (the check that the level is reached) plus how many
+ * controls are waiting on this step. The foot is pinned to the baseline so
+ * the checks line up across the row.
+ */
 function growthRow(p, doc, dimension, controls, y) {
   const dist = distribution(controls, dimension.key);
   const gap = 3;
   const colW = (CONTENT_W - gap * 4) / 5;
-  const pad = 2.5;
+  const pad = 2.8;
   const lineH = 2.9;
+  const bandH = 9;
+  const numW = 4.2;
+  const rise = 9; // one dimension per page, so the staircase can be steep
+  const PASS_BG = '#e8f7e8';
+  const PASS_FG = '#0a7d0a';
 
   // Measure first so the whole row moves to a new page if it doesn't fit.
   const blocks = ADVICE[dimension.key].map((step, from) => {
-    p.font(8, 'bold');
+    p.font(8.5, 'bold');
     const title = doc.splitTextToSize(safe(step.title), colW - pad * 2);
     p.font(6.8);
-    const actions = step.actions.map((a) => doc.splitTextToSize(safe(a), colW - pad * 2 - 3));
-    const done = doc.splitTextToSize(safe(`Klaar als: ${step.done}`), colW - pad * 2);
-    const h = 11 + title.length * 3.4 + 1.5 + actions.reduce((n, l) => n + l.length, 0) * lineH
-      + actions.length * 0.8 + 1.5 + done.length * lineH + 8;
-    return { step, from, title, actions, done, h };
+    const actions = step.actions.map((a) => doc.splitTextToSize(safe(a), colW - pad * 2 - numW));
+    p.font(7);
+    const done = doc.splitTextToSize(safe(step.done), colW - pad * 2 - 3.5);
+    const topH = bandH + 4.5 + title.length * 3.5 + 1.5 + 4
+      + actions.reduce((n, l) => n + l.length * lineH + 1.4, 0);
+    const doneH = 2.5 + 3.5 + done.length * 3 + 1.5;
+    const footH = doneH + 2.5 + 5.5 + pad;
+    return { step, from, title, actions, done, doneH, footH, h: topH + 3 + footH };
   });
-  const rise = 5;
-  const bandH = 8;
   const tallest = Math.max(...blocks.map((b, i) => b.h + (4 - i) * rise));
   if (y + 7 + tallest > BOTTOM) { doc.addPage(); y = TOP + 2; }
 
   p.font(10, 'bold'); p.color(INK);
-  p.text(`${dimension.label}`, M, y);
+  p.text(dimension.label, M, y);
+  const labelW = doc.getTextWidth(safe(dimension.label));
   p.font(7.5); p.color(INK_3);
-  p.text(`gem. ${formatAvg(dist.avg)} · ${dist.scored} van ${dist.total} beoordeeld`, M + doc.getTextWidth(safe(dimension.label)) + 14, y);
+  p.text(`gem. ${formatAvg(dist.avg)} · ${dist.scored} van ${dist.total} beoordeeld`, M + labelW + 4, y);
   y += 4;
 
   const baseY = y + tallest;
@@ -478,32 +491,60 @@ function growthRow(p, doc, dimension, controls, y) {
     const top = y + (4 - i) * rise;
     const to = b.from + 1;
     const lvl = MATURITY_LEVELS[to];
+
+    // Card + coloured band: "1 -> 2  BEHEERST".
     p.box(x, top, colW, baseY - top, PLANE, 1.2);
     p.box(x, top, colW, bandH, lvl.color, 1.2);
     p.box(x, top + bandH - 1.2, colW, 1.2, lvl.color);
     p.color(lvl.ink);
-    p.font(13, 'bold'); p.text(String(to), x + pad, top + bandH / 2);
-    p.font(7.5, 'bold'); p.text(p.fit(lvl.name.toUpperCase(), colW - pad * 2 - 20), x + pad + 6, top + bandH / 2);
-    p.font(6.5); p.text(`vanaf ${b.from}`, x + colW - pad, top + bandH / 2, { align: 'right' });
+    // "0 → 1", the arrow drawn: the built-in fonts have no arrow glyph.
+    const my = top + bandH / 2;
+    p.font(9.5, 'bold');
+    p.text(String(b.from), x + pad, my);
+    const ax = x + pad + doc.getTextWidth(String(b.from)) + 1.3;
+    doc.setDrawColor(...rgb(lvl.ink)); doc.setLineWidth(0.35);
+    doc.line(ax, my, ax + 3.2, my);
+    doc.setFillColor(...rgb(lvl.ink));
+    doc.triangle(ax + 4, my, ax + 3, my - 0.9, ax + 3, my + 0.9, 'F');
+    p.text(String(to), ax + 5.3, my);
+    p.font(8.5, 'bold'); p.text(p.fit(lvl.name.toUpperCase(), colW - pad * 2 - 13), x + colW - pad, top + bandH / 2, { align: 'right' });
 
-    let cy = top + bandH + 4;
-    p.font(8, 'bold'); p.color(INK);
-    b.title.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += 3.4; });
+    let cy = top + bandH + 4.5;
+    p.font(8.5, 'bold'); p.color(INK);
+    b.title.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += 3.5; });
     cy += 1.5;
 
-    p.font(6.8); p.color(INK_2);
-    for (const lines of b.actions) {
-      p.box(x + pad + 0.3, cy - 0.5, 1, 1, INK_3, 0.5);
-      lines.forEach((line) => { doc.text(line, x + pad + 3, cy, { baseline: 'middle' }); cy += lineH; });
-      cy += 0.8;
-    }
-    cy += 1.5;
-    p.color('#0a7d0a');
-    b.done.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += lineH; });
+    p.font(6, 'bold'); p.color(INK_3); p.text('ACTIES', x + pad, cy);
+    cy += 4;
+    b.actions.forEach((lines, n) => {
+      doc.setFillColor(...rgb(INK_2));
+      doc.circle(x + pad + 1.4, cy, 1.4, 'F');
+      p.font(5.5, 'bold'); p.color('#ffffff'); p.text(String(n + 1), x + pad + 1.4, cy, { align: 'center' });
+      p.font(6.8); p.color(INK_2);
+      lines.forEach((line) => { doc.text(line, x + pad + numW, cy, { baseline: 'middle' }); cy += lineH; });
+      cy += 1.4;
+    });
+
+    // Foot, pinned to the baseline: "Klaar als" box, then the count.
+    let fy = baseY - b.footH;
+    const boxW = colW - pad * 2;
+    p.box(x + pad, fy, boxW, b.doneH, PASS_BG, 1);
+    p.box(x + pad, fy, 0.9, b.doneH, PASS_FG);
+    // check mark
+    doc.setDrawColor(...rgb(PASS_FG)); doc.setLineWidth(0.45);
+    doc.lines([[0.7, 0.7], [1.5, -1.6]], x + pad + 2.4, fy + 3.6);
+    p.font(6.2, 'bold'); p.color(PASS_FG); p.text('KLAAR ALS', x + pad + 5.8, fy + 3.5);
+    let dy = fy + 3.5 + 3.5;
+    p.font(7); p.color(INK);
+    b.done.forEach((line) => { doc.text(line, x + pad + 2.4, dy, { baseline: 'middle' }); dy += 3; });
+    fy += b.doneH + 2.5;
 
     const waiting = dist.counts[b.from];
+    p.box(x + pad, fy, boxW, 5.5, waiting ? '#eaf1fe' : '#eef0f4', 1);
     p.font(6.8, 'bold'); p.color(waiting ? BRAND : INK_3);
-    p.text(waiting ? `${waiting} ${waiting === 1 ? 'control staat' : 'controls staan'} op ${b.from}` : `Geen controls op ${b.from}`, x + pad, baseY - 3.5);
+    p.text(waiting
+      ? `${waiting} ${waiting === 1 ? 'control staat' : 'controls staan'} op ${b.from} · ${pct(waiting, dist.total)}%`
+      : `Geen controls op ${b.from}`, x + pad + 2, fy + 2.75);
   });
   return baseY + 8;
 }
@@ -693,7 +734,7 @@ export async function exportMaturityPdf(controls) {
 
   /* Groeipad — what each step up means, per dimension */
   doc.addPage();
-  y = sectionTitle(p, 'Groeipad — wat is er nodig voor het volgende niveau', TOP + 2, 'Per dimensie: acties en wanneer het niveau bereikt is');
+  y = sectionTitle(p, 'Groeipad — wat is er nodig voor het volgende niveau', TOP + 2, 'Per stap: het doel, de acties, en wanneer het volgende niveau bereikt is');
   y += 2;
   for (const dimension of MATURITY_DIMENSIONS) y = growthRow(p, doc, dimension, controls, y);
 

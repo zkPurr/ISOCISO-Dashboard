@@ -69,17 +69,23 @@ function growthCard(controls) {
   const steps = ADVICE[dimension.key].map((step, from) => {
     const to = from + 1;
     const waiting = dist.counts[from];
+    const lvl = MATURITY_LEVELS[to];
     return el('.grow-step', { style: { '--rise': String(from) } }, [
-      el('.grow-step-band', { style: { background: MATURITY_LEVELS[to].color, color: MATURITY_LEVELS[to].ink } }, [
-        el('span.grow-step-num', String(to)),
-        el('span.grow-step-name', MATURITY_LEVELS[to].name),
-        el('span.grow-step-from', `vanaf ${from}`),
+      el('.grow-step-band', { style: { background: lvl.color, color: lvl.ink } }, [
+        el('span.grow-step-move', [String(from), el('span', { 'aria-hidden': 'true' }, '→'), String(to)]),
+        el('span.grow-step-name', lvl.name),
       ]),
       el('strong.grow-step-title', step.title),
-      el('ul.adv-actions', step.actions.map((a) => el('li', a))),
-      el('.adv-done', [icon('check', { size: 14 }), el('span', [el('strong', 'Klaar als: '), step.done])]),
-      el('.grow-count', { className: `grow-count${waiting ? '' : ' is-zero'}` },
-        waiting ? `${num(waiting)} ${waiting === 1 ? 'control staat' : 'controls staan'} op ${from} — ${pct(waiting, dist.total)}%` : `Geen controls op ${from}`),
+      el('.grow-label', 'Acties'),
+      el('ol.grow-actions', step.actions.map((a) => el('li', a))),
+      el('.grow-foot', [
+        el('.grow-done', [
+          el('.grow-done-head', [icon('check', { size: 14 }), 'Klaar als']),
+          el('p', step.done),
+        ]),
+        el('.grow-count', { className: `grow-count${waiting ? '' : ' is-zero'}` },
+          waiting ? `${num(waiting)} ${waiting === 1 ? 'control staat' : 'controls staan'} op ${from} · ${pct(waiting, dist.total)}%` : `Geen controls op ${from}`),
+      ]),
     ]);
   });
 
