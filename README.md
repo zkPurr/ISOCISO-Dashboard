@@ -30,6 +30,24 @@ zodra je DevTools sluit, want "Disable cache" verbergt het. `serve.py` stuurt
 De app gebruikt hash-routing (`#/dashboard`), dus er zijn geen redirect-regels
 nodig voor deep links.
 
+**Docker** — het image staat op Docker Hub als
+[`dubple/isociso-dashboard`](https://hub.docker.com/r/dubple/isociso-dashboard)
+(nginx:alpine met de app erin, poort 80). Draaien:
+
+```bash
+docker compose up -d        # of: docker run -p 8080:80 dubple/isociso-dashboard:latest
+```
+
+Elke release krijgt een datumtag (`YYYY-MM-DD`) én `latest`, en wordt gebouwd
+voor zowel `linux/amd64` als `linux/arm64` — een build op één machine levert
+anders alleen die architectuur op, en dan start het image op de andere niet:
+
+```bash
+docker buildx create --name isociso-multi --driver docker-container --bootstrap   # eenmalig
+docker buildx build --builder isociso-multi --platform linux/amd64,linux/arm64 \
+  -t dubple/isociso-dashboard:2026-10-12 -t dubple/isociso-dashboard:latest --push .
+```
+
 ## Excel importeren
 
 Klik op **Importeren** rechtsboven en sleep je `.xlsx`, `.xls` of `.csv` erin.
