@@ -54,6 +54,9 @@ const INK_3 = '#8a91a3';
 const RULE = '#e6e9f0';
 const PLANE = '#f4f6fa';
 const BRAND = '#2563eb';
+// The total score (the minimum of the three dimensions) sits next to its parts
+// everywhere; this band + outline is what makes it read as the headline.
+const SCORE_BAND = '#e8effd';
 
 const rgb = (hex) => {
   const h = hex.replace('#', '');
@@ -93,7 +96,18 @@ function painter(doc) {
     doc.line(x1, y1, x2, y2);
   };
 
-  return { fill, color, font, fit, text, box, rule };
+  /** Light band with a brand outline: marks the total score column/row. */
+  const outline = (x, y, w, h, r = 1, width = 0.35) => {
+    doc.setDrawColor(...rgb(BRAND));
+    doc.setLineWidth(width);
+    doc.roundedRect(x, y, w, h, r, r, 'S');
+  };
+  const highlight = (x, y, w, h, r = 1) => {
+    box(x, y, w, h, SCORE_BAND, r);
+    outline(x, y, w, h, r);
+  };
+
+  return { fill, color, font, fit, text, box, rule, outline, highlight };
 }
 
 /* ------------------------------------------------------------------ Sections */
@@ -190,16 +204,21 @@ function averageMatrix_(p, matrix, { x, y, w }) {
   const rowH = 6.4;
 
   p.box(x, y, w, rowH, PLANE);
-  p.font(7.5, 'bold'); p.color(INK_2);
   cols.forEach((label, i) => {
+    const isScore = i === 2;
     const cx = i === 0 ? x + 2 : x + firstW + restW * (i - 1) + restW / 2;
+    p.font(isScore ? 8 : 7.5, 'bold'); p.color(isScore ? BRAND : INK_2);
     p.text(label, cx, y + rowH / 2, { align: i === 0 ? 'left' : 'center' });
   });
   let cy = y + rowH;
+  p.box(x + firstW + restW + 0.4, cy, restW - 0.8, rowH * matrix.length, SCORE_BAND);
 
   for (const row of matrix) {
     const isTotal = row.label === 'Totaal';
-    if (isTotal) p.box(x, cy, w, rowH, PLANE);
+    if (isTotal) {
+      p.box(x, cy, firstW + restW, rowH, PLANE);
+      p.box(x + firstW + restW * 2, cy, w - firstW - restW * 2, rowH, PLANE);
+    }
     p.font(8, isTotal ? 'bold' : 'normal'); p.color(INK);
     p.text(p.fit(row.label, firstW - 4), x + 2, cy + rowH / 2);
     p.text(String(row.count), x + firstW + restW / 2, cy + rowH / 2, { align: 'center' });
@@ -207,13 +226,18 @@ function averageMatrix_(p, matrix, { x, y, w }) {
       const cx = x + firstW + restW * (i + 1);
       if (value == null) { p.color(INK_3); p.text('—', cx + restW / 2, cy + rowH / 2, { align: 'center' }); return; }
       const level = maturityLevel(Math.floor(value));
-      p.box(cx + restW / 2 - 6, cy + 1, 12, rowH - 2, level.color, 0.8);
-      p.font(7.5, 'bold'); p.color(level.ink);
+      const main = i === 0;
+      const chipW = main ? 14 : 10;
+      p.box(cx + restW / 2 - chipW / 2, cy + (main ? 0.8 : 1.3), chipW, rowH - (main ? 1.6 : 2.6), level.color, 0.8);
+      p.font(main ? 8.5 : 7, 'bold'); p.color(level.ink);
       p.text(formatAvg(value), cx + restW / 2, cy + rowH / 2, { align: 'center' });
     });
     p.rule(x, cy + rowH, x + w, cy + rowH);
     cy += rowH;
   }
+  // Outline the score column over everything drawn above (header + rows).
+  const sx = x + firstW + restW;
+  p.outline(sx + 0.4, y + 0.3, restW - 0.8, cy - y - 0.6, 1, 0.45);
   return cy;
 }
 
@@ -242,7 +266,7 @@ function heatmaps(p, doc, controls, y) {
     SCORE_SERIES.forEach(({ key, label }, row) => {
       const isMain = key === 'maturity';
       const h = isMain ? mainH : dimH;
-      p.font(isMain ? 7.5 : 6.5, isMain ? 'bold' : 'normal'); p.color(isMain ? INK : INK_2);
+      p.font(isMain ? 8 : 6.5, isMain ? 'bold' : 'normal'); p.color(isMain ? BRAND : INK_2);
       p.text(label, M + labelW - 2, y + h / 2, { align: 'right' });
 
       group.controls.forEach((control, i) => {
@@ -369,17 +393,19 @@ function pieMatrix(p, doc, controls, y) {
   y += 4;
 
   for (const { key, label } of SCORE_SERIES) {
-    p.font(8.5, 'bold'); p.color(INK);
-    p.text(key === 'maturity' ? 'Score (min)' : label, M, y + rowH / 2 - 2);
+    const isMain = key === 'maturity';
+    if (isMain) p.highlight(M - 2, y - 0.5, CONTENT_W + 4, rowH - 2, 1.5);
+    p.font(isMain ? 10 : 8.5, 'bold'); p.color(isMain ? BRAND : INK);
+    p.text(isMain ? 'Score (min)' : label, M, y + rowH / 2 - 2);
     columns.forEach((col, i) => {
       const dist = distribution(col.controls, key);
       const cx = M + labelW + colW * i + colW / 2;
-      donut(p, doc, dist, { cx, cy: y + r + 2, r });
+      donut(p, doc, dist, { cx, cy: y + r + 2, r: isMain ? r + 1 : r - 1.5 });
       const atTarget = dist.counts.slice(MATURITY_PASS_THRESHOLD).reduce((a, b) => a + b, 0);
       p.font(6.5); p.color(INK_2);
       p.text(`${pct(atTarget, dist.total)}% op niveau >= ${MATURITY_PASS_THRESHOLD}`, cx, y + r * 2 + 6, { align: 'center' });
     });
-    p.rule(M, y + rowH - 1, M + CONTENT_W, y + rowH - 1);
+    if (!isMain) p.rule(M, y + rowH - 1, M + CONTENT_W, y + rowH - 1);
     y += rowH;
   }
   return y;
@@ -513,9 +539,11 @@ function controlTable(p, doc, rows, y, { title }) {
 
   const header = () => {
     p.box(M, y, CONTENT_W, rowH + 0.6, PLANE);
-    p.font(7.5, 'bold'); p.color(INK_2);
     let cx = M;
     for (const col of cols) {
+      const main = col.score === 'maturity';
+      if (main) p.box(cx + 0.4, y, col.w - 0.8, rowH + 0.6, SCORE_BAND);
+      p.font(main ? 8 : 7.5, 'bold'); p.color(main ? BRAND : INK_2);
       p.text(col.label, col.score ? cx + col.w / 2 : cx + 2, y + (rowH + 0.6) / 2, { align: col.score ? 'center' : 'left' });
       cx += col.w;
     }
@@ -533,8 +561,11 @@ function controlTable(p, doc, rows, y, { title }) {
       if (col.score) {
         const score = scoreOf(control, col.score);
         const level = maturityLevel(score);
-        p.box(cx + col.w / 2 - 4.5, y + 0.8, 9, rowH - 1.6, level.color, 0.6);
-        p.font(7, 'bold'); p.color(level.ink);
+        const main = col.score === 'maturity';
+        if (main) p.box(cx + 0.4, y, col.w - 0.8, rowH, SCORE_BAND);
+        const chipW = main ? 12 : 7;
+        p.box(cx + col.w / 2 - chipW / 2, y + (main ? 0.6 : 1.1), chipW, rowH - (main ? 1.2 : 2.2), level.color, 0.6);
+        p.font(main ? 8 : 6.5, 'bold'); p.color(level.ink);
         p.text(score == null ? '—' : String(score), cx + col.w / 2, y + rowH / 2, { align: 'center' });
       } else {
         p.font(7.5, col.bold ? 'bold' : 'normal'); p.color(INK);
@@ -612,6 +643,7 @@ export async function exportMaturityPdf(controls) {
   let ly = y;
   for (const { key, label } of SCORE_SERIES) {
     const dist = distribution(controls, key);
+    if (key === 'maturity') p.highlight(M - 1.5, ly - 1.2, leftW + 3, 8.9, 1.2);
     levelBar(p, dist, { x: M, y: ly, w: leftW, labelW: 30, h: 6.5,
       label: key === 'maturity' ? 'Score (min)' : label, sub: `gem. ${formatAvg(dist.avg)}` });
     ly += 9;
