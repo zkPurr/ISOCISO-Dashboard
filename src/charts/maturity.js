@@ -33,7 +33,7 @@ export function levelLegend({ withUnscored = true } = {}) {
  * @param {{ total: number, counts: number[], unscored: number, avg: number|null }} dist
  * @param {{ label: string, sub?: string, noun?: string }} opts
  */
-export function levelBar(dist, { label, sub, noun = 'controls' }) {
+export function levelBar(dist, { label, sub, noun = 'controls', main = false }) {
   const segments = segmentsOf(dist).filter((s) => s.value > 0);
 
   const track = el('.mat-bar', { role: 'img', 'aria-label': `${label}: ${segmentsOf(dist).map((s) => `${s.label} ${s.value}`).join(', ')}` },
@@ -48,7 +48,7 @@ export function levelBar(dist, { label, sub, noun = 'controls' }) {
       return node;
     }));
 
-  return el('.mat-bar-row', [
+  return el('.mat-bar-row', { className: main ? 'mat-bar-row is-score' : 'mat-bar-row' }, [
     el('.mat-bar-label', [
       el('strong', label),
       el('span', sub ?? `${num(dist.total)} controls · gem. ${formatAvg(dist.avg)}`),
@@ -80,10 +80,11 @@ export function levelDonut(dist, { title, series }) {
 
 /** Matrix of averages: domains down, Score / Proces / Beleid / Evidence across. */
 export function averageTable(matrix) {
-  const cell = (value) => {
-    if (value == null) return el('td.is-center', el('span.muted', '—'));
+  const cell = (value, i) => {
+    const main = i === 0;
+    if (value == null) return el('td.is-center', { className: main ? 'is-center is-score' : 'is-center' }, el('span.muted', '—'));
     const level = maturityLevel(Math.floor(value));
-    return el('td.is-center', el('span.mat-avg', {
+    return el('td.is-center', { className: main ? 'is-center is-score' : 'is-center' }, el('span.mat-avg', {
       style: { background: level.color, color: level.ink },
       title: `Gemiddeld ${formatAvg(value)} — ${level.name}`,
     }, formatAvg(value)));
@@ -93,7 +94,8 @@ export function averageTable(matrix) {
     el('thead', el('tr', [
       el('th', { scope: 'col' }, 'Domein'),
       el('th.is-center', { scope: 'col' }, 'Controls'),
-      ...SCORE_SERIES.map((s) => el('th.is-center', { scope: 'col' }, s.key === 'maturity' ? 'Score (min)' : s.label)),
+      ...SCORE_SERIES.map((s) => el('th.is-center', { scope: 'col', className: s.key === 'maturity' ? 'is-center is-score' : 'is-center' },
+        s.key === 'maturity' ? 'Score (min)' : s.label)),
     ])),
     el('tbody', matrix.map((row) => el('tr', { className: row.label === 'Totaal' ? 'is-total' : '' }, [
       el('td', row.label),

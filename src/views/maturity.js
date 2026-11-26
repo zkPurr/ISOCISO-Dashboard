@@ -174,7 +174,7 @@ function dimensionCard(controls) {
     el('.card', [
       el('.card-head', el('.card-title', 'Niveaus per dimensie')),
       el('.card-body.mat-bars', SCORE_SERIES.map(({ key, label }) =>
-        levelBar(distribution(controls, key), { label: key === 'maturity' ? 'Score (min)' : label }))),
+        levelBar(distribution(controls, key), { label: key === 'maturity' ? 'Score (min)' : label, main: key === 'maturity' }))),
     ]),
     el('.card', [
       el('.card-head', el('.card-title', 'Gemiddelde per domein en dimensie')),
@@ -221,9 +221,9 @@ function withCellCount(node, count) {
 
 function weakestCard(controls) {
   const rows = weakestControls(controls, 15);
-  const scoreCell = (score) => {
+  const scoreCell = (score, main) => {
     const level = maturityLevel(score);
-    return el('td.is-center', el('span.mat-avg', { style: { background: level.color, color: level.ink }, title: level.name }, score ?? '—'));
+    return el('td.is-center', { className: main ? 'is-center is-score' : 'is-center' }, el('span.mat-avg', { style: { background: level.color, color: level.ink }, title: level.name }, score ?? '—'));
   };
 
   return el('.card', [
@@ -235,14 +235,15 @@ function weakestCard(controls) {
       ? el('.table-wrap', el('table.data.mat-matrix', [
         el('thead', el('tr', [
           el('th', 'Control'), el('th', 'Beschrijving'), el('th', 'Eigenaar'),
-          ...SCORE_SERIES.map((s) => el('th.is-center', s.key === 'maturity' ? 'Score' : s.label)),
+          ...SCORE_SERIES.map((s) => el('th.is-center', { className: s.key === 'maturity' ? 'is-center is-score' : 'is-center' },
+            s.key === 'maturity' ? 'Score' : s.label)),
           el('th', 'Volgende stap'),
         ])),
         el('tbody', rows.map((control) => el('tr', [
           el('td.col-id', el('button.link-more', { type: 'button', title: 'Groeiadvies bekijken', onclick: () => openAdvice(control) }, control.id)),
           el('td.col-title', [control.title || el('span.muted', '—'), isOverride(control) && el('span.muted', ' (score handmatig)')]),
           el('td.col-owner', control.owner || el('span.muted', '—')),
-          ...SCORE_SERIES.map(({ key }) => scoreCell(scoreOf(control, key))),
+          ...SCORE_SERIES.map(({ key }) => scoreCell(scoreOf(control, key), key === 'maturity')),
           el('td.adv-next', el('button.adv-next-btn', { type: 'button', onclick: () => openAdvice(control) },
             adviceSummary(control).map((line) => el('span', line)))),
         ]))),

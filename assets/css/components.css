@@ -800,6 +800,32 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
   font-weight: 650; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; text-align: center;
 }
 .mat-matrix tr.is-total td { font-weight: 650; background: var(--surface-2); }
+
+/* Total score vs. its three dimensions: the score (the MIN of Proces, Beleid,
+   Evidence) is the headline, so its column / bar gets a brand band and larger
+   chips, and the dimension chips step back. */
+.mat-matrix tr > .is-score {
+  background: var(--brand-soft);
+  box-shadow: inset 2px 0 var(--brand), inset -2px 0 var(--brand);
+}
+.mat-matrix thead th.is-score {
+  color: var(--brand-ink); font-weight: 700;
+  box-shadow: inset 2px 0 var(--brand), inset -2px 0 var(--brand), inset 0 2px var(--brand);
+}
+.mat-matrix tbody tr:last-child > .is-score {
+  box-shadow: inset 2px 0 var(--brand), inset -2px 0 var(--brand), inset 0 -2px var(--brand);
+}
+.mat-matrix td.is-score .mat-avg { min-width: 46px; padding: 3px 10px; font-size: var(--fs-md); font-weight: 700; }
+.mat-matrix td:not(.is-score) .mat-avg { min-width: 30px; padding: 1px 6px; font-size: var(--fs-xs); }
+.mat-bar-row.is-score {
+  margin: 0 calc(-1 * var(--sp-2));
+  padding: var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.mat-bar-row.is-score .mat-bar-label strong { color: var(--brand-ink); font-weight: 700; }
+.mat-bar-row.is-score .mat-bar { height: 36px; }
 .mat-model td, .mat-model th { vertical-align: top; white-space: normal; font-size: var(--fs-sm); }
 .mat-model thead th { white-space: nowrap; }
 .mat-model tbody th { position: static; background: var(--surface-2); color: var(--text-primary); }
@@ -812,7 +838,7 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
 .hm-domain { display: flex; flex-direction: column; gap: 3px; overflow-x: auto; padding-bottom: 2px; }
 .hm-row { display: grid; grid-template-columns: 72px auto; align-items: center; gap: var(--sp-2); }
 .hm-row-label { font-size: var(--fs-xs); color: var(--text-secondary); text-align: right; }
-.hm-row.is-main .hm-row-label { font-weight: 650; color: var(--text-primary); }
+.hm-row.is-main .hm-row-label { font-weight: 700; color: var(--brand-ink); font-size: var(--fs-sm); }
 .hm-cells { display: flex; gap: 3px; }
 .hm-body { container-type: inline-size; }
 /* Every domain shares one cell width, sized so the longest domain just fits
