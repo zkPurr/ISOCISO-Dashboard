@@ -69,12 +69,11 @@ function growthCard(controls) {
   const steps = ADVICE[dimension.key].map((step, from) => {
     const to = from + 1;
     const waiting = dist.counts[from];
-    return el('.grow-step', { style: { '--rise': String(from), borderTopColor: MATURITY_LEVELS[to].color } }, [
-      el('.grow-step-head', [
-        el('span.mat-avg', { style: { background: MATURITY_LEVELS[from].color, color: MATURITY_LEVELS[from].ink } }, from),
-        el('span.adv-arrow', '→'),
-        el('span.mat-avg', { style: { background: MATURITY_LEVELS[to].color, color: MATURITY_LEVELS[to].ink } }, to),
+    return el('.grow-step', { style: { '--rise': String(from) } }, [
+      el('.grow-step-band', { style: { background: MATURITY_LEVELS[to].color, color: MATURITY_LEVELS[to].ink } }, [
+        el('span.grow-step-num', String(to)),
         el('span.grow-step-name', MATURITY_LEVELS[to].name),
+        el('span.grow-step-from', `vanaf ${from}`),
       ]),
       el('strong.grow-step-title', step.title),
       el('ul.adv-actions', step.actions.map((a) => el('li', a))),
@@ -252,22 +251,35 @@ function weakestCard(controls) {
   ]);
 }
 
-function modelCard() {
+/**
+ * The maturity model as a CMMI-style staircase: one solid block per level,
+ * each a step higher than the last, with what that level means per dimension
+ * and how many controls score there today.
+ */
+function modelCard(controls) {
+  const dist = distribution(controls);
   return el('.card', [
     el('.card-head', el('.card-title', 'Maturiteitsmodel')),
-    el('.table-wrap', el('table.data.mat-model', [
-      el('thead', el('tr', [
-        el('th', ''),
-        ...MATURITY_LEVELS.map((level) => el('th', [
-          el('span.mat-avg', { style: { background: level.color, color: level.ink } }, level.level),
-          ` ${level.name}`,
-        ])),
-      ])),
-      el('tbody', MATURITY_DIMENSIONS.map((dimension) => el('tr', [
-        el('th', { scope: 'row' }, dimension.label),
-        ...dimension.levels.map((text) => el('td', text)),
-      ]))),
-    ])),
+    el('.card-body', [
+      el('.cmmi', { role: 'list' }, MATURITY_LEVELS.map((level) => {
+        const count = dist.counts[level.level];
+        return el('.cmmi-step', {
+          role: 'listitem',
+          style: { '--rise': String(level.level), background: level.color, color: level.ink },
+        }, [
+          el('.cmmi-head', [
+            el('span.cmmi-num', String(level.level)),
+            el('span.cmmi-name', [el('strong', level.name), el('span', level.en)]),
+          ]),
+          el('dl.cmmi-dims', MATURITY_DIMENSIONS.flatMap((dimension) => [
+            el('dt', dimension.label),
+            el('dd', dimension.levels[level.level]),
+          ])),
+          el('.cmmi-count', `${num(count)} ${count === 1 ? 'control' : 'controls'} · ${pct(count, dist.total)}%`),
+        ]);
+      })),
+      el('.cmmi-axis', 'Toenemende maturiteit'),
+    ]),
   ]);
 }
 
@@ -314,6 +326,6 @@ export function maturityView() {
     heatmapCard(controls),
     growthCard(controls),
     weakestCard(controls),
-    modelCard(),
+    modelCard(controls),
   ]);
 }

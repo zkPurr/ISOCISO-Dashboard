@@ -286,44 +286,73 @@ function heatmaps(p, doc, controls, y) {
   return y;
 }
 
-const MODEL_LABEL_W = 22;
-const MODEL_COL_W = (CONTENT_W - MODEL_LABEL_W) / MATURITY_LEVELS.length;
-const MODEL_HEAD_H = 7;
+/**
+ * The maturity model as a CMMI-style staircase: one solid block per level,
+ * each a clear step higher than the one before, with what that level means
+ * per dimension inside it and how many controls score there today.
+ */
+function modelStaircase(p, doc, controls, y) {
+  const gap = 2;
+  const n = MATURITY_LEVELS.length;
+  const colW = (CONTENT_W - gap * (n - 1)) / n;
+  const pad = 2.5;
+  const lineH = 3;
+  const headH = 17;
+  const footH = 9;
+  const dist = distribution(controls);
 
-/** Wrapped cell text and row height per dimension, so the table can be measured before drawing. */
-function modelRows(p, doc) {
-  p.font(7);
-  return MATURITY_DIMENSIONS.map((dimension) => {
-    const lines = dimension.levels.map((t) => doc.splitTextToSize(safe(t), MODEL_COL_W - 4));
-    return { dimension, lines, rowH: Math.max(...lines.map((l) => l.length)) * 3.2 + 3 };
+  // Measure the descriptions so every block fits its text.
+  p.font(6.8);
+  const blocks = MATURITY_LEVELS.map((level) => {
+    const dims = MATURITY_DIMENSIONS.map((d) => ({
+      label: d.label,
+      lines: doc.splitTextToSize(safe(d.levels[level.level]), colW - pad * 2),
+    }));
+    const bodyH = dims.reduce((h, d) => h + 3.2 + d.lines.length * lineH + 2, 0);
+    return { level, dims, bodyH };
   });
-}
+  const minH = headH + Math.max(...blocks.map((b) => b.bodyH)) + footH;
 
-const modelHeight = (p, doc) => MODEL_HEAD_H + modelRows(p, doc).reduce((sum, r) => sum + r.rowH, 0);
+  const axisH = 9;
+  const room = BOTTOM - y - axisH;
+  const rise = Math.max(6, Math.min(18, (room - minH) / (n - 1)));
+  const baseY = y + minH + rise * (n - 1);
 
-function modelTable(p, doc, y) {
-  const labelW = MODEL_LABEL_W;
-  const colW = MODEL_COL_W;
-  const headH = MODEL_HEAD_H;
+  blocks.forEach(({ level, dims }, i) => {
+    const x = M + i * (colW + gap);
+    const top = baseY - (minH + rise * i);
+    p.box(x, top, colW, baseY - top, level.color, 1.5);
 
-  p.box(M, y, CONTENT_W, headH, PLANE);
-  MATURITY_LEVELS.forEach((level, i) => {
-    const cx = M + labelW + i * colW;
-    p.box(cx + 2, y + 1.5, 5, 4, level.color, 0.6);
-    p.font(7, 'bold'); p.color(level.ink); p.text(String(level.level), cx + 4.5, y + headH / 2, { align: 'center' });
-    p.color(INK); p.font(7.5, 'bold'); p.text(level.name, cx + 9, y + headH / 2);
+    // Head: big level number + name.
+    p.color(level.ink);
+    p.font(20, 'bold'); p.text(String(level.level), x + pad, top + 7.5);
+    p.font(9, 'bold'); p.text(p.fit(level.name, colW - pad * 2 - 10), x + pad + 10, top + 6);
+    p.font(7); p.text(p.fit(level.en, colW - pad * 2 - 10), x + pad + 10, top + 10);
+    p.rule(x + pad, top + headH - 3, x + colW - pad, top + headH - 3, level.ink, 0.15);
+
+    let cy = top + headH + 0.5;
+    for (const d of dims) {
+      p.font(6.8, 'bold'); p.color(level.ink); p.text(d.label.toUpperCase(), x + pad, cy);
+      cy += 3.2;
+      p.font(6.8);
+      d.lines.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += lineH; });
+      cy += 2;
+    }
+
+    const count = dist.counts[level.level];
+    p.font(7.5, 'bold'); p.color(level.ink);
+    p.text(`${count} ${count === 1 ? 'control' : 'controls'} · ${pct(count, dist.total)}%`, x + pad, baseY - 4);
   });
-  y += headH;
 
-  for (const { dimension, lines, rowH } of modelRows(p, doc)) {
-    p.font(8, 'bold'); p.color(INK);
-    p.text(dimension.label, M + 2, y + rowH / 2);
-    p.font(7); p.color(INK_2);
-    lines.forEach((l, i) => doc.text(l, M + labelW + i * colW + 2, y + 3.2, { baseline: 'middle' }));
-    p.rule(M, y + rowH, M + CONTENT_W, y + rowH);
-    y += rowH;
-  }
-  return y;
+  // Axis: maturity grows to the right.
+  const ay = baseY + 5;
+  doc.setDrawColor(...rgb(INK_3)); doc.setLineWidth(0.4);
+  doc.line(M, ay, M + CONTENT_W - 3, ay);
+  doc.setFillColor(...rgb(INK_3));
+  doc.triangle(M + CONTENT_W, ay, M + CONTENT_W - 3.5, ay - 1.6, M + CONTENT_W - 3.5, ay + 1.6, 'F');
+  p.font(7.5, 'bold'); p.color(INK_3);
+  p.text('Toenemende maturiteit', M + CONTENT_W - 5, ay - 2.5, { align: 'right' });
+  return ay + 4;
 }
 
 /* ------------------------------------------------------------------ Pies */
@@ -428,11 +457,12 @@ function growthRow(p, doc, dimension, controls, y) {
     p.font(6.8);
     const actions = step.actions.map((a) => doc.splitTextToSize(safe(a), colW - pad * 2 - 3));
     const done = doc.splitTextToSize(safe(`Klaar als: ${step.done}`), colW - pad * 2);
-    const h = 8 + title.length * 3.4 + 1.5 + actions.reduce((n, l) => n + l.length, 0) * lineH
+    const h = 11 + title.length * 3.4 + 1.5 + actions.reduce((n, l) => n + l.length, 0) * lineH
       + actions.length * 0.8 + 1.5 + done.length * lineH + 8;
     return { step, from, title, actions, done, h };
   });
-  const rise = 3;
+  const rise = 5;
+  const bandH = 8;
   const tallest = Math.max(...blocks.map((b, i) => b.h + (4 - i) * rise));
   if (y + 7 + tallest > BOTTOM) { doc.addPage(); y = TOP + 2; }
 
@@ -447,22 +477,16 @@ function growthRow(p, doc, dimension, controls, y) {
     const x = M + i * (colW + gap);
     const top = y + (4 - i) * rise;
     const to = b.from + 1;
+    const lvl = MATURITY_LEVELS[to];
     p.box(x, top, colW, baseY - top, PLANE, 1.2);
-    p.box(x, top, colW, 1.2, MATURITY_LEVELS[to].color);
+    p.box(x, top, colW, bandH, lvl.color, 1.2);
+    p.box(x, top + bandH - 1.2, colW, 1.2, lvl.color);
+    p.color(lvl.ink);
+    p.font(13, 'bold'); p.text(String(to), x + pad, top + bandH / 2);
+    p.font(7.5, 'bold'); p.text(p.fit(lvl.name.toUpperCase(), colW - pad * 2 - 20), x + pad + 6, top + bandH / 2);
+    p.font(6.5); p.text(`vanaf ${b.from}`, x + colW - pad, top + bandH / 2, { align: 'right' });
 
-    let cy = top + 5;
-    const chip = (lvl, cx) => {
-      const l = MATURITY_LEVELS[lvl];
-      p.box(cx, cy - 2, 5, 4, l.color, 0.6);
-      p.font(7, 'bold'); p.color(l.ink); p.text(String(lvl), cx + 2.5, cy, { align: 'center' });
-    };
-    chip(b.from, x + pad);
-    p.font(7, 'bold'); p.color(INK_3); p.text('->', x + pad + 6, cy);
-    chip(to, x + pad + 10.5);
-    p.font(6.5, 'bold'); p.color(INK_3);
-    p.text(MATURITY_LEVELS[to].name.toUpperCase(), x + colW - pad, cy, { align: 'right' });
-    cy += 5;
-
+    let cy = top + bandH + 4;
     p.font(8, 'bold'); p.color(INK);
     b.title.forEach((line) => { doc.text(line, x + pad, cy, { baseline: 'middle' }); cy += 3.4; });
     cy += 1.5;
@@ -663,9 +687,9 @@ export async function exportMaturityPdf(controls) {
   legend(p, doc, M, y);
   y = heatmaps(p, doc, controls, y + 7);
 
-  if (y + 6 + modelHeight(p, doc) > BOTTOM) { doc.addPage(); y = TOP + 2; }
-  y = sectionTitle(p, 'Maturiteitsmodel', y);
-  modelTable(p, doc, y);
+  doc.addPage();
+  y = sectionTitle(p, 'Maturiteitsmodel', TOP + 2, 'Per niveau: wat het betekent voor Proces, Beleid en Evidence · aantal controls op score');
+  modelStaircase(p, doc, controls, y + 2);
 
   /* Groeipad — what each step up means, per dimension */
   doc.addPage();

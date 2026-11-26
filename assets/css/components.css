@@ -826,9 +826,6 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
 }
 .mat-bar-row.is-score .mat-bar-label strong { color: var(--brand-ink); font-weight: 700; }
 .mat-bar-row.is-score .mat-bar { height: 36px; }
-.mat-model td, .mat-model th { vertical-align: top; white-space: normal; font-size: var(--fs-sm); }
-.mat-model thead th { white-space: nowrap; }
-.mat-model tbody th { position: static; background: var(--surface-2); color: var(--text-primary); }
 
 /* Heatmap: fixed-size cells, so a 37-control domain is a visibly longer bar
    than an 8-control one. */
@@ -896,13 +893,18 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
 .grow-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-3); align-items: end; }
 .grow-step {
   display: flex; flex-direction: column; gap: var(--sp-2);
-  background: var(--surface-2); border: 1px solid var(--border); border-top: 4px solid;
-  border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  margin-top: calc((4 - var(--rise)) * 18px);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 0 var(--sp-4) var(--sp-4); overflow: hidden;
+  margin-top: calc((4 - var(--rise)) * 44px);
   align-self: stretch;
 }
-.grow-step-head { display: flex; align-items: center; gap: 6px; }
-.grow-step-name { font-size: var(--fs-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-left: auto; }
+.grow-step-band {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 calc(-1 * var(--sp-4)) var(--sp-1); padding: 8px var(--sp-4);
+}
+.grow-step-num { font-size: 22px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
+.grow-step-name { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.grow-step-from { margin-left: auto; font-size: var(--fs-xs); opacity: .85; }
 .grow-step-title { font-size: var(--fs-md); line-height: 1.35; }
 .grow-count {
   margin-top: auto; font-size: var(--fs-xs); font-weight: 650; color: var(--brand-ink);
@@ -912,6 +914,34 @@ td.col-key { white-space: nowrap; font-weight: 600; font-variant-numeric: tabula
 @media (max-width: 1300px) {
   .grow-steps { grid-template-columns: minmax(0, 1fr); }
   .grow-step { margin-top: 0; }
+}
+
+/* Maturiteitsmodel: CMMI staircase — solid blocks, each level a clear step up. */
+/* Columns stretch to the tallest; each block starts lower by a fixed step,
+   so every level is exactly one step higher than the one before. */
+.cmmi { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+.cmmi-step {
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  border-radius: var(--r-md); padding: var(--sp-3);
+  margin-top: calc((5 - var(--rise)) * 44px);
+}
+.cmmi-head { display: flex; align-items: center; gap: 10px; padding-bottom: var(--sp-2); border-bottom: 1px solid currentColor; border-bottom-color: color-mix(in srgb, currentColor 35%, transparent); }
+.cmmi-num { font-size: 34px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.cmmi-name { display: flex; flex-direction: column; min-width: 0; }
+.cmmi-name strong { font-size: var(--fs-md); line-height: 1.2; }
+.cmmi-name span { font-size: var(--fs-xs); opacity: .85; }
+.cmmi-dims { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); line-height: 1.4; }
+.cmmi-dims dt { font-weight: 700; text-transform: uppercase; letter-spacing: .4px; font-size: 10.5px; opacity: .9; }
+.cmmi-dims dd { margin: 0 0 6px; }
+.cmmi-count { margin-top: auto; font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.cmmi-axis {
+  margin-top: var(--sp-2); text-align: right; font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted);
+  border-top: 2px solid var(--border); padding-top: 4px; position: relative;
+}
+.cmmi-axis::after { content: '→'; margin-left: 6px; }
+@media (max-width: 1100px) {
+  .cmmi { grid-template-columns: minmax(0, 1fr); }
+  .cmmi-step { margin-top: 0; }
 }
 
 .adv-arrow { color: var(--text-muted); font-weight: 600; }

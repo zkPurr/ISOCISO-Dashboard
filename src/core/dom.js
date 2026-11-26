@@ -58,7 +58,11 @@ function applyProps(node, props) {
     } else if (key === 'dataset') {
       Object.assign(node.dataset, value);
     } else if (key === 'style' && typeof value === 'object') {
-      Object.assign(node.style, value);
+      // Custom properties (--x) only take effect through setProperty.
+      for (const [prop, v] of Object.entries(value)) {
+        if (prop.startsWith('--')) node.style.setProperty(prop, v);
+        else node.style[prop] = v;
+      }
     } else if (key === 'html') {
       node.innerHTML = value;
     } else if (key in node && key !== 'list' && key !== 'type') {
