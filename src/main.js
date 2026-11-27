@@ -6,6 +6,7 @@ import { renderSidebar, NAV_ITEMS } from './ui/sidebar.js';
 import { renderTopbar } from './ui/topbar.js';
 import { closeDetailPane } from './ui/detailPane.js';
 import { closeColumnPicker } from './ui/columnPicker.js';
+import { closeChartMenu } from './ui/chartMenu.js';
 import { TASK_PROJECTS } from './data/tasks.js';
 import { dashboardView } from './views/dashboard.js';
 import { maturityView } from './views/maturity.js';
@@ -56,6 +57,7 @@ function render() {
   if (route !== renderedRoute) {
     closeDetailPane();
     closeColumnPicker();
+    closeChartMenu();
     renderedRoute = route;
   }
 
@@ -122,6 +124,7 @@ window.addEventListener('storage', () => {
 
   closeDetailPane();
   closeColumnPicker();
+  closeChartMenu();
 
   // Adopt the view preferences too, not just the data. Every render persists
   // the whole snapshot, so a tab that kept its own sort and page size would

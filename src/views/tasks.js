@@ -6,13 +6,14 @@ import { selectTaskView, tasksForProject, visibleColumns } from '../data/selecto
 import { dueSeverity, TASK_PROJECTS } from '../data/tasks.js';
 import {
   distribution, assigneeOf, statusOf, labelsOf,
-  createdColumn, createdBounds, tasksInRange,
+  createdColumn, createdBounds, tasksInRange, isClosedOf,
 } from '../data/taskStats.js';
 import { donutChart } from '../charts/donut.js';
 import { taskTable } from '../ui/taskTable.js';
 import { columnPicker } from '../ui/columnPicker.js';
 import { tableFooter } from '../ui/pagination.js';
 import { openTaskImportModal } from '../ui/taskImportModal.js';
+import { chartMenu } from '../ui/chartMenu.js';
 
 /**
  * One page per Jira board. The two pages are the same view with a different
@@ -161,28 +162,31 @@ function boardCharts(boardTasks, columns, project) {
   const created = createdColumn(columns);
   const bounds = created ? createdBounds(boardTasks, created) : null;
   const range = bounds ? state.taskRange[project.key] : null;
-  const tasks = bounds ? tasksInRange(boardTasks, created, range) : boardTasks;
-  const narrowed = tasks !== boardTasks;
+  const inRange = bounds ? tasksInRange(boardTasks, created, range) : boardTasks;
+  const narrowed = inRange !== boardTasks;
+
+  // Closed work is history, not workload — left out unless the ⋯ menu says otherwise.
+  const isClosed = isClosedOf(columns);
+  const closedCount = inRange.filter(isClosed).length;
+  const showClosed = state.ui.showClosedTasks;
+  const tasks = showClosed ? inRange : inRange.filter((task) => !isClosed(task));
 
   const byAssignee = distribution(tasks, assigneeOf(columns), { emptyLabel: 'Niet toegewezen' });
   const byStatus = distribution(tasks, statusOf(columns), { emptyLabel: 'Geen status' });
   const byLabel = distribution(tasks, labelsOf(columns), { emptyLabel: 'Geen label' });
 
-  const foldNote = (result) => (result.folded
-    ? `${num(result.distinct)} in totaal — de kleinste ${result.folded === 1
-      ? 'staat' : `${num(result.folded)} staan`} onder "Overig".`
-    : null);
-
   // Tasks with no Created date cannot sit inside any window — say how many
   // dropped out for that reason, so the totals still add up.
   const undated = narrowed ? boardTasks.filter((task) => task.parsed[created.key] == null).length : 0;
-  const scope = narrowed
-    ? [
-      `${num(tasks.length)} van ${num(boardTasks.length)} taken, aangemaakt `
-        + `${dayLabel(range.from || bounds.from)} t/m ${dayLabel(range.to || bounds.to)}`,
-      undated ? `${num(undated)} zonder aanmaakdatum niet meegeteld` : '',
-    ].filter(Boolean).join(' · ')
-    : `${num(tasks.length)} taken op dit bord`;
+  const noun = showClosed ? 'taken' : 'open taken';
+  const scope = [
+    narrowed
+      ? `${num(tasks.length)} ${noun}, aangemaakt `
+        + `${dayLabel(range.from || bounds.from)} t/m ${dayLabel(range.to || bounds.to)}`
+      : `${num(tasks.length)} ${noun} op dit bord`,
+    undated ? `${num(undated)} zonder aanmaakdatum niet meegeteld` : '',
+    !showClosed && closedCount ? `${num(closedCount)} gesloten verborgen` : '',
+  ].filter(Boolean).join(' · ');
 
   return el('.card', [
     el('.card-head.chart-head', [
@@ -190,7 +194,10 @@ function boardCharts(boardTasks, columns, project) {
         el('.card-title', `${project.label} in één oogopslag`),
         el('.table-foot-info', scope),
       ]),
-      bounds && rangePicker(project, bounds, range),
+      el('.chart-head-actions', [
+        bounds && rangePicker(project, bounds, range),
+        chartMenu({ closedCount }),
+      ]),
     ]),
     el('.card-body', el('.viz-grid-3', [
       donutChart({
@@ -199,7 +206,6 @@ function boardCharts(boardTasks, columns, project) {
         segments: byAssignee.slices,
         noun: 'taken',
         legendPercent: true,
-        note: foldNote(byAssignee),
       }),
       donutChart({
         title: 'Per status',
@@ -207,7 +213,6 @@ function boardCharts(boardTasks, columns, project) {
         segments: byStatus.slices,
         noun: 'taken',
         legendPercent: true,
-        note: foldNote(byStatus),
       }),
       donutChart({
         title: 'Per label',
@@ -215,12 +220,6 @@ function boardCharts(boardTasks, columns, project) {
         segments: byLabel.slices,
         noun: 'keer',
         legendPercent: true,
-        // A task with three labels is counted three times, so this total is not
-        // the number of tasks — say so rather than let the numbers not add up.
-        note: byLabel.total === tasks.length
-          ? foldNote(byLabel)
-          : [`${num(byLabel.total)} labels over ${num(tasks.length)} taken — een taak met`,
-            'meerdere labels telt bij elk label mee.', foldNote(byLabel)].filter(Boolean).join(' '),
       }),
     ])),
   ]);

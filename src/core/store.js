@@ -75,9 +75,13 @@ export const state = {
   /** Column picker open state. Deliberately not persisted. */
   taskColumnsOpen: false,
 
+  /** The ⋯ menu beside the board charts. Not persisted either. */
+  taskChartMenuOpen: false,
+
   /** heatmapDetail: show the Proces / Beleid / Evidence rows under each score strip. */
+  /** showClosedTasks: whether the board charts count closed tasks too. */
   /** pieSeries / adviceDim: which score the donuts show, which dimension the growth path shows. */
-  ui: { sidebarCollapsed: false, heatmapDetail: true, pieSeries: 'maturity', adviceDim: 'matPolicy' },
+  ui: { sidebarCollapsed: false, heatmapDetail: true, pieSeries: 'maturity', adviceDim: 'matPolicy', showClosedTasks: false },
 };
 
 export function subscribe(fn) {

@@ -1,4 +1,5 @@
 import { columnByRole } from './tasks.js';
+import { normaliseHeader } from './schema.js';
 
 /**
  * Distributions behind the board's pie charts.
@@ -101,6 +102,23 @@ export const labelsOf = (columns) => (task) => {
     .split(/[,;|]/)
     .map((part) => part.trim())
     .filter(Boolean);
+};
+
+/* ------------------------------------------------------------------
+   Closed. A task is closed when its Status says so, or — for exports
+   whose Status is a custom word — when Jira's own Status Category is
+   Done. The charts leave these out unless asked.
+   ------------------------------------------------------------------ */
+
+const CLOSED_WORDS = new Set([
+  'closed', 'gesloten', 'done', 'gereed', 'afgerond', 'resolved', 'opgelost',
+  'cancelled', 'canceled', 'geannuleerd', 'wontdo', 'wontfix',
+]);
+
+export const isClosedOf = (columns) => (task) => {
+  const status = normaliseHeader(cellFor(task, columns, 'status'));
+  const category = normaliseHeader(cellFor(task, columns, 'statusCategory'));
+  return CLOSED_WORDS.has(status) || CLOSED_WORDS.has(category);
 };
 
 /* ------------------------------------------------------------------

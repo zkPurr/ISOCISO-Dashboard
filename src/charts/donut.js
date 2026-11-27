@@ -126,9 +126,7 @@ export function donutChart({
         return row;
       })),
     ]),
-    // Rendered even when empty: three charts side by side reserve the same
-    // note height either way, so a short "Overig" line doesn't leave one
-    // donut sitting lower than its neighbours.
-    el('.bar-sub', note || ''),
+    // Only when there is something to say — the board charts pass none.
+    note && el('.bar-sub', note),
   ]);
 }
